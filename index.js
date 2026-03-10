@@ -57,7 +57,7 @@ async function checkCooldowns() {
 
                 // DM to target user
                 try {
-                    await user.send("Your cooldown is over!");
+                    await user.send("you can be assigned the task now");
                 } catch (e) {
                     console.error(`Could not DM user ${cd.userId}`);
                 }
@@ -65,7 +65,7 @@ async function checkCooldowns() {
                 // Channel Ping
                 try {
                     const mention = initiator ? `${user} and ${initiator}` : `${user}`;
-                    await channel.send(`${mention}, the cooldown is over!`);
+                    await channel.send(`${mention}, you can be assigned the task now`);
                 } catch (e) {
                     console.error(`Could not send message to channel ${cd.channelId}`);
                 }
