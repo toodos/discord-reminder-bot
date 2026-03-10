@@ -257,9 +257,18 @@ client.on('interactionCreate', async interaction => {
 
             const embed = new EmbedBuilder()
                 .setColor('#9b59b6')
-                .setTitle('🔒 Cooldown Active')
-                .setDescription(`${targetUser} will be assigned a task after **<t:${Math.floor(endTime / 1000)}:R>**.\nBoth you and they will be notified.`)
-                .setThumbnail(targetUser.displayAvatarURL());
+                .setTitle('🛑 COOLDOWN INITIALIZED')
+                .setAuthor({ name: 'System Security Protocol', iconURL: 'https://cdn-icons-png.flaticon.com/512/3064/3064155.png' })
+                .setDescription(`The following user has been placed under a restricted cooldown period.`)
+                .addFields(
+                    { name: '👤 Target User', value: `${targetUser}`, inline: true },
+                    { name: '⏳ Duration', value: `\`${timeStr}\``, inline: true },
+                    { name: '📅 Expiraiton', value: `<t:${Math.floor(endTime / 1000)}:f> (<t:${Math.floor(endTime / 1000)}:R>)`, inline: false },
+                    { name: '🛡️ Initiated By', value: `${interaction.user}`, inline: true }
+                )
+                .setThumbnail(targetUser.displayAvatarURL())
+                .setFooter({ text: 'Status: Monitoring for expiration...' })
+                .setTimestamp();
 
             await interaction.reply({ embeds: [embed] });
         } else if (interaction.commandName === 'remove_cd') {
