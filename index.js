@@ -3,20 +3,17 @@ const { Client, GatewayIntentBits, Partials, PermissionFlagsBits, ActivityType, 
 const { parseTime } = require('./utils/timer');
 const {
     getUser, addMoney, removeMoney, setCooldown, getCooldowns,
-    clearCooldown, removeCooldownByUserId, getAllUsers, addXP, claimDaily
+    clearCooldown, removeCooldownByUserId, getAllUsers
 } = require('./utils/database');
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessages,
     ],
     partials: [Partials.Channel],
 });
-
-const xpCooldowns = new Set();
 
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
@@ -100,27 +97,6 @@ async function checkCooldowns() {
         client.user.setActivity('Recording videos for OnlyFans', { type: ActivityType.Custom });
     }
 }
-
-client.on('messageCreate', async message => {
-    if (message.author.bot || !message.guild) return;
-
-    if (xpCooldowns.has(message.author.id)) return;
-
-    const result = addXP(message.author.id, Math.floor(Math.random() * 10) + 15);
-
-    if (result.leveledUp) {
-        const embed = new EmbedBuilder()
-            .setColor('#FFD700')
-            .setTitle('🚀 Level Up!')
-            .setDescription(`GG ${message.author}! You've reached **Level ${result.newLevel}**!`)
-            .setThumbnail(message.author.displayAvatarURL());
-
-        message.channel.send({ content: `${message.author}`, embeds: [embed] });
-    }
-
-    xpCooldowns.add(message.author.id);
-    setTimeout(() => xpCooldowns.delete(message.author.id), 60000); // 1 minute cooldown
-});
 
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
@@ -296,41 +272,6 @@ client.on('interactionCreate', async interaction => {
             removeCooldownByUserId(targetUser.id);
 
             await interaction.reply({ content: `Successfully removed cooldowns for ${targetUser.tag}.` });
-        } else if (interaction.commandName === 'rank') {
-            const targetUser = interaction.options.getUser('user') || interaction.user;
-            const userData = getUser(targetUser.id);
-
-            const xpNeeded = userData.level * 100 * 1.5;
-            const progress = (userData.xp / xpNeeded) * 100;
-            const progressBar = "🟩".repeat(Math.round(progress / 10)) + "⬜".repeat(10 - Math.round(progress / 10));
-
-            const embed = new EmbedBuilder()
-                .setColor('#3498db')
-                .setAuthor({ name: `${targetUser.tag}'s Level`, iconURL: targetUser.displayAvatarURL() })
-                .setDescription(`**Level ${userData.level}**`)
-                .addFields(
-                    { name: 'XP Progress', value: `\`${userData.xp} / ${xpNeeded}\` XP\n${progressBar} **${Math.round(progress)}%**` }
-                )
-                .setFooter({ text: 'Keep chatting to earn more XP!' });
-
-            await interaction.reply({ embeds: [embed] });
-        } else if (interaction.commandName === 'daily') {
-            const result = claimDaily(interaction.user.id);
-
-            if (!result.success) {
-                return interaction.reply({
-                    content: `Chill bro! You can claim again **<t:${Math.floor(result.nextAvailable / 1000)}:R>**.`,
-                    ephemeral: true
-                });
-            }
-
-            const embed = new EmbedBuilder()
-                .setColor('#00ff00')
-                .setTitle('🎁 Daily Reward')
-                .setDescription(`You claimed your daily bonus and received **₹${result.amount}**!`)
-                .setThumbnail('https://cdn-icons-png.flaticon.com/512/2850/2850358.png');
-
-            await interaction.reply({ embeds: [embed] });
         }
     } catch (error) {
         console.error('Error handling interaction:', error);
