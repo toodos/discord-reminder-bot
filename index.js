@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Partials, PermissionFlagsBits, ActivityType, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, PermissionFlagsBits, ActivityType, EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const { parseTime } = require('./utils/timer');
 const {
     getUser, addMoney, removeMoney, setCooldown, getCooldowns,
@@ -17,7 +17,7 @@ const client = new Client({
 
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
-    client.user.setActivity('Recording videos for OnlyFans', { type: ActivityType.Custom });
+    client.user.setActivity('Baking strawberry cupcakes 🍓🧁', { type: ActivityType.Custom });
 
     // Initial check and setup timers for all existing cooldowns
     const cooldowns = getCooldowns();
@@ -55,15 +55,29 @@ async function processExpiredCooldown(cd) {
 
         // DM to target user
         try {
-            await user.send("you can be assigned the task now");
+            const file = new AttachmentBuilder('./assets/cooldown.png');
+            const embed = new EmbedBuilder()
+                .setColor('#ff85a2')
+                .setTitle('🌸 Cooldown Expired! ✨')
+                .setThumbnail('attachment://cooldown.png')
+                .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nYay! You can be assigned the task now! ✨🌸\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
+                .setTimestamp();
+            await user.send({ embeds: [embed], files: [file] });
         } catch (e) {
             console.error(`Could not DM user ${cd.userId}`);
         }
 
         // Channel Ping
         try {
+            const file = new AttachmentBuilder('./assets/cooldown.png');
             const mention = initiator ? `${user} and ${initiator}` : `${user}`;
-            await channel.send(`${mention}, you can be assigned the task now`);
+            const embed = new EmbedBuilder()
+                .setColor('#ff85a2')
+                .setTitle('🎀 Cooldown Expired! 🌷')
+                .setThumbnail('attachment://cooldown.png')
+                .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nPaging ${mention}!\nYou can be assigned the task now! 🎀🌷\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
+                .setTimestamp();
+            await channel.send({ content: `${mention}`, embeds: [embed], files: [file] });
         } catch (e) {
             console.error(`Could not send message to channel ${cd.channelId}`);
         }
@@ -87,14 +101,14 @@ async function checkCooldowns() {
         if (remainingMs > 0) {
             const hours = Math.floor(remainingMs / (1000 * 60 * 60));
             const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
-            client.user.setActivity(`Cooldown: ${hours}h ${minutes}m left`, { type: ActivityType.Custom });
+            client.user.setActivity(`Counting down: ${hours}h ${minutes}m left... ⏳🍭`, { type: ActivityType.Custom });
         } else {
-            client.user.setActivity('Recording videos for OnlyFans', { type: ActivityType.Custom });
+            client.user.setActivity('Baking strawberry cupcakes 🍓🧁', { type: ActivityType.Custom });
             // Process any that missed their timer
             processExpiredCooldown(soonest);
         }
     } else {
-        client.user.setActivity('Recording videos for OnlyFans', { type: ActivityType.Custom });
+        client.user.setActivity('Baking strawberry cupcakes 🍓🧁', { type: ActivityType.Custom });
     }
 }
 
@@ -107,7 +121,7 @@ client.on('interactionCreate', async interaction => {
             const existing = getCooldowns().find(c => c.userId === interaction.user.id);
             if (existing) {
                 return interaction.reply({
-                    content: `You are on cooldown! You cannot assign me any new tasks until **<t:${Math.floor(existing.endTime / 1000)}:R>**.`,
+                    content: `Wait a second! ✨ You're taking a tiny break! You can assign me a new task in **<t:${Math.floor(existing.endTime / 1000)}:R>**. 🎀`,
                     ephemeral: true
                 });
             }
@@ -122,39 +136,43 @@ client.on('interactionCreate', async interaction => {
             const durationMs = parseTime(timeStr);
 
             if (!durationMs) {
-                return interaction.reply({ content: 'Invalid time format! Please use something like "10m" or "2h".', ephemeral: true });
+                return interaction.reply({ content: 'Oh no! I couldn\'t understand that time format. Please use something like "10m" or "2h"! 🌸', ephemeral: true });
             }
 
+            const file = new AttachmentBuilder('./assets/reminder.png');
             const embed = new EmbedBuilder()
-                .setColor('#0099ff')
-                .setTitle('⏰ Reminder Set')
-                .setDescription(`I will remind ${targetUser} about: \n> ${message}`)
+                .setColor('#ff85a2')
+                .setTitle('⏰ Reminder Set! ✨')
+                .setThumbnail('attachment://reminder.png')
+                .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nI'll make sure to remind ${targetUser} about: \n> ${message} 🎀\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
                 .addFields(
-                    { name: 'Time', value: `\`${timeStr}\``, inline: true },
-                    { name: 'Channel', value: `${targetChannel}`, inline: true }
+                    { name: '✨ Time', value: `\`${timeStr}\``, inline: true },
+                    { name: '🌷 Channel', value: `${targetChannel}`, inline: true }
                 )
                 .setTimestamp();
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.reply({ embeds: [embed], files: [file], ephemeral: true });
 
             setTimeout(async () => {
+                const file = new AttachmentBuilder('./assets/reminder.png');
                 const remindEmbed = new EmbedBuilder()
-                    .setColor('#0099ff')
-                    .setTitle('🔔 Reminder!')
-                    .setDescription(message)
-                    .setFooter({ text: `Set by ${interaction.user.tag}` })
+                    .setColor('#ff85a2')
+                    .setTitle('🔔 Ding-dong! Reminder! 🎀')
+                    .setThumbnail('attachment://reminder.png')
+                    .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\n${message} ✨\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
+                    .setFooter({ text: `Lovingly set by ${interaction.user.tag} 🌸` })
                     .setTimestamp();
 
                 // Send DM
                 try {
-                    await targetUser.send({ embeds: [remindEmbed] });
+                    await targetUser.send({ embeds: [remindEmbed], files: [file] });
                 } catch (error) {
                     console.error(`Could not send DM to ${targetUser.tag}.`);
                 }
 
                 // Ping in channel
                 try {
-                    await targetChannel.send({ content: `${targetUser}`, embeds: [remindEmbed] });
+                    await targetChannel.send({ content: `${targetUser}`, embeds: [remindEmbed], files: [file] });
                 } catch (error) {
                     console.error(`Could not send message to channel ${targetChannel.id}.`);
                 }
@@ -162,25 +180,26 @@ client.on('interactionCreate', async interaction => {
         } else if (interaction.commandName === 'add_money') {
             const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
             if (!isAdmin) {
-                return interaction.reply({ content: 'Only Administrators can use this command!', ephemeral: true });
+                return interaction.reply({ content: 'Oopsie! Only big-boss Administrators can use this command! 🎀', ephemeral: true });
             }
 
             const targetUser = interaction.options.getUser('user');
             const amount = interaction.options.getNumber('amount');
 
             if (amount < 0) {
-                return interaction.reply({ content: 'You cannot add a negative amount of money!', ephemeral: true });
+                return interaction.reply({ content: 'You can\'t add a negative amount of money, silly! 🍭', ephemeral: true });
             }
 
             const newBalance = addMoney(targetUser.id, amount);
+            const file = new AttachmentBuilder('./assets/money.png');
             const embed = new EmbedBuilder()
-                .setColor('#2ecc71')
-                .setTitle('💰 Transaction Successful')
-                .setDescription(`Added **₹${amount}** to ${targetUser}'s balance.`)
-                .addFields({ name: 'New Balance', value: `**₹${newBalance}**` })
-                .setThumbnail(targetUser.displayAvatarURL());
+                .setColor('#ffc8dd')
+                .setTitle('💰 Yay! Money Added! ✨')
+                .setThumbnail('attachment://money.png')
+                .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nSuccessfully added **₹${amount}** to ${targetUser}'s sparkly balance! 🍬\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
+                .addFields({ name: '✨ New Balance', value: `**₹${newBalance}**` });
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.reply({ embeds: [embed], files: [file] });
 
         } else if (interaction.commandName === 'balance') {
             const targetUser = interaction.options.getUser('user') || interaction.user;
@@ -204,44 +223,48 @@ client.on('interactionCreate', async interaction => {
                 leaderboardStr += `\n...You are at **#${userRank}**`;
             }
 
+            const file = new AttachmentBuilder('./assets/balance.png');
             const embed = new EmbedBuilder()
-                .setColor('#FFD700')
+                .setColor('#ffb7ff')
                 .setAuthor({
-                    name: `${targetUser.username}'s Personal Vault`,
+                    name: `${targetUser.username}'s Sparkly Vault 💎`,
                     iconURL: targetUser.displayAvatarURL({ dynamic: true })
                 })
-                .setThumbnail('https://cdn-icons-png.flaticon.com/512/2489/2489756.png') // Gold bars icon
+                .setThumbnail('attachment://balance.png')
+                .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nChecking the vault floors... 🩰✨\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
                 .addFields(
-                    { name: '💰 Current Wealth', value: `\`₹${userData.balance.toLocaleString()}\``, inline: true },
-                    { name: '📊 Global Rank', value: `\`#${userRank}\``, inline: true },
+                    { name: '💰 Current Wealth', value: `\`₹${userData.balance.toLocaleString()}\` 🌸`, inline: true },
+                    { name: '📊 Global Rank', value: `\`#${userRank}\` ✨`, inline: true },
                     { name: '\u200B', value: '\u200B', inline: false }, // Spacer
-                    { name: '🏆 Top Ballers (Global)', value: leaderboardStr || "*No records found.*", inline: false }
+                    { name: '🏆 Top Ballers (Global) 🍭', value: leaderboardStr || "*No records found yet!*", inline: false }
                 )
-                .setFooter({ text: 'Economy System Premium v2.0', iconURL: client.user.displayAvatarURL() })
+                .setFooter({ text: 'Economy System Cute v2.0 🎀', iconURL: client.user.displayAvatarURL() })
                 .setTimestamp();
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.reply({ embeds: [embed], files: [file] });
         } else if (interaction.commandName === 'remove_money') {
             const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
             if (!isAdmin) {
-                return interaction.reply({ content: 'Only Administrators can use this command!', ephemeral: true });
+                return interaction.reply({ content: 'Oopsie! Only big-boss Administrators can do that! 🎀', ephemeral: true });
             }
 
             const targetUser = interaction.options.getUser('user');
             const amount = interaction.options.getNumber('amount');
 
             if (amount < 0) {
-                return interaction.reply({ content: 'You cannot remove a negative amount of money!', ephemeral: true });
+                return interaction.reply({ content: 'You can\'t remove a negative amount! That\'s just silly. 🍭', ephemeral: true });
             }
 
             const newBalance = removeMoney(targetUser.id, amount);
+            const file = new AttachmentBuilder('./assets/money.png');
             const embed = new EmbedBuilder()
-                .setColor('#e74c3c')
-                .setTitle('💸 Balance Deducted')
-                .setDescription(`Removed **₹${amount}** from ${targetUser}'s account.`)
-                .addFields({ name: 'Remaining Balance', value: `**₹${newBalance}**` });
+                .setColor('#c3aed6')
+                .setTitle('💸 Balance Deducted 🌷')
+                .setThumbnail('attachment://money.png')
+                .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nRemoved **₹${amount}** from ${targetUser}'s account. 🍬\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
+                .addFields({ name: '✨ Remaining Balance', value: `**₹${newBalance}**` });
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.reply({ embeds: [embed], files: [file] });
         } else if (interaction.commandName === 'cd') {
             const targetUser = interaction.options.getUser('user');
             const timeStr = interaction.options.getString('time') || '24h';
@@ -249,14 +272,14 @@ client.on('interactionCreate', async interaction => {
             const existing = getCooldowns().find(c => c.userId === targetUser.id);
             if (existing) {
                 return interaction.reply({
-                    content: `${targetUser.tag} is already on cooldown! It expires **<t:${Math.floor(existing.endTime / 1000)}:R>**.`,
+                    content: `Wait a sec! ✨ ${targetUser.tag} is already having a cozy nap! It expires **<t:${Math.floor(existing.endTime / 1000)}:R>**. 🌙`,
                     ephemeral: true
                 });
             }
 
             const duration = parseTime(timeStr);
             if (!duration) {
-                return interaction.reply({ content: 'Invalid time format!', ephemeral: true });
+                return interaction.reply({ content: 'Oh no! I didn\'t understand that time format. Try "24h" or "1d"! 🌸', ephemeral: true });
             }
 
             const endTime = Date.now() + duration;
@@ -265,39 +288,40 @@ client.on('interactionCreate', async interaction => {
             setCooldown(targetUser.id, interaction.channelId, endTime, interaction.user.id);
             setTimeout(() => processExpiredCooldown(cooldownData), duration);
 
+            const file = new AttachmentBuilder('./assets/cooldown.png');
             const embed = new EmbedBuilder()
-                .setColor('#9b59b6')
-                .setTitle('🛑 COOLDOWN INITIALIZED')
-                .setAuthor({ name: 'System Security Protocol', iconURL: 'https://cdn-icons-png.flaticon.com/512/3064/3064155.png' })
-                .setDescription(`The following user has been placed under a restricted cooldown period.`)
+                .setColor('#ff85a2')
+                .setTitle('🌸 Chill Time! ✨')
+                .setAuthor({ name: 'Cooldown Corner 🎀', iconURL: 'https://cdn-icons-png.flaticon.com/512/3468/3468411.png' })
+                .setThumbnail('attachment://cooldown.png')
+                .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nThe following user is taking a li'l nap. You can receive next task after the cool down ends!\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
                 .addFields(
-                    { name: '👤 Target User', value: `${targetUser}`, inline: true },
-                    { name: '⏳ Duration', value: `\`${timeStr}\``, inline: true },
-                    { name: '📅 Expiraiton', value: `<t:${Math.floor(endTime / 1000)}:f> (<t:${Math.floor(endTime / 1000)}:R>)`, inline: false },
-                    { name: '🛡️ Initiated By', value: `${interaction.user}`, inline: true }
+                    { name: '✨ Resty Person', value: `${targetUser}`, inline: true },
+                    { name: '⏳ Wait Time', value: `\`${timeStr}\``, inline: true },
+                    { name: '🌙 Alarm Set For', value: `<t:${Math.floor(endTime / 1000)}:f> (<t:${Math.floor(endTime / 1000)}:R>)`, inline: false },
+                    { name: '🍭 Started By', value: `${interaction.user}`, inline: true }
                 )
-                .setThumbnail(targetUser.displayAvatarURL())
-                .setFooter({ text: 'Status: Monitoring for expiration...' })
+                .setFooter({ text: 'Status: Counting down the sleepy time...' })
                 .setTimestamp();
 
-            await interaction.reply({ embeds: [embed] });
+            await interaction.reply({ embeds: [embed], files: [file] });
         } else if (interaction.commandName === 'remove_cd') {
             const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
             if (!isAdmin) {
-                return interaction.reply({ content: 'Only Administrators can use this command!', ephemeral: true });
+                return interaction.reply({ content: 'Oopsie! Only big-boss Administrators can do that! 🎀', ephemeral: true });
             }
 
             const targetUser = interaction.options.getUser('user');
             removeCooldownByUserId(targetUser.id);
 
-            await interaction.reply({ content: `Successfully removed cooldowns for ${targetUser.tag}.` });
+            await interaction.reply({ content: `Yay! Successfully removed cooldowns for ${targetUser.tag}! ✨🌸` });
         }
     } catch (error) {
         console.error('Error handling interaction:', error);
         if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+            await interaction.followUp({ content: 'Oh no! Something went a little wobbly while doing that! 🧊💦', ephemeral: true });
         } else {
-            await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+            await interaction.reply({ content: 'Oh no! Something went a little wobbly while doing that! 🧊💦', ephemeral: true });
         }
     }
 });

@@ -4,29 +4,29 @@ const { REST, Routes, PermissionFlagsBits } = require('discord.js');
 const commands = [
     {
         name: 'remind',
-        description: 'Set a reminder',
+        description: 'Set a super-duper reminder! ⏰✨',
         options: [
             {
                 name: 'time',
-                description: 'Time from now (e.g., 10m, 1h)',
+                description: 'When should I remind you? (e.g., 10m, 1h) ⏳',
                 type: 3, // STRING
                 required: true,
             },
             {
                 name: 'message',
-                description: 'What to remind you about',
+                description: 'What should I remember for you? 🎀',
                 type: 3, // STRING
                 required: true,
             },
             {
                 name: 'channel',
-                description: 'The channel or ticket to ping you in',
+                description: 'Where should I ping you? 🌷',
                 type: 7, // CHANNEL
                 required: false,
             },
             {
                 name: 'user',
-                description: 'The user to DM the reminder to (defaults to you)',
+                description: 'Who should get the DM? (defaults to you!) 🐾',
                 type: 6, // USER
                 required: false,
             }
@@ -34,18 +34,18 @@ const commands = [
     },
     {
         name: 'add_money',
-        description: 'Add money to a user',
+        description: 'Shower a user with sparkly money! 💰✨',
         default_member_permissions: PermissionFlagsBits.Administrator.toString(),
         options: [
             {
                 name: 'user',
-                description: 'The user to add money to',
+                description: 'The lucky user! 🍭',
                 type: 6, // USER
                 required: true,
             },
             {
                 name: 'amount',
-                description: 'The amount of money to add',
+                description: 'How much sparkly money? 💎',
                 type: 10, // NUMBER
                 required: true,
             }
@@ -53,11 +53,11 @@ const commands = [
     },
     {
         name: 'balance',
-        description: 'Check your balance or another user\'s balance',
+        description: 'Peek into your sparkly personal vault! 💎🌸',
         options: [
             {
                 name: 'user',
-                description: 'The user to check the balance of',
+                description: 'Whose vault should we peek into? 🎀',
                 type: 6, // USER
                 required: false,
             }
@@ -65,18 +65,18 @@ const commands = [
     },
     {
         name: 'remove_money',
-        description: 'Remove money from a user',
+        description: 'Oopsie! Take some money away. 💸🌷',
         default_member_permissions: PermissionFlagsBits.Administrator.toString(),
         options: [
             {
                 name: 'user',
-                description: 'The user to remove money from',
+                description: 'The user to deduct from 🐾',
                 type: 6, // USER
                 required: true,
             },
             {
                 name: 'amount',
-                description: 'The amount of money to remove',
+                description: 'Amount to remove 🍭',
                 type: 10, // NUMBER
                 required: true,
             }
@@ -84,17 +84,17 @@ const commands = [
     },
     {
         name: 'cd',
-        description: 'Set a 24-hour cooldown for a user',
+        description: 'Give someone a cozy li\'l nap time! 🌙🌸',
         options: [
             {
                 name: 'user',
-                description: 'The user to put on cooldown',
+                description: 'The user who needs a nap 😴',
                 type: 6, // USER
                 required: true,
             },
             {
                 name: 'time',
-                description: 'The duration of the cooldown (e.g., 12h, 1d). Defaults to 24h.',
+                description: 'How long for the nap? (e.g., 12h, 1d). Defaults to 24h! ✨',
                 type: 3, // STRING
                 required: false,
             }
@@ -102,12 +102,12 @@ const commands = [
     },
     {
         name: 'remove_cd',
-        description: 'Remove a cooldown from a user',
+        description: 'Wake someone up from their nap! ☀️✨',
         default_member_permissions: PermissionFlagsBits.Administrator.toString(),
         options: [
             {
                 name: 'user',
-                description: 'The user to remove the cooldown from',
+                description: 'The sleepy user to wake up 🐾',
                 type: 6, // USER
                 required: true,
             }
