@@ -25,6 +25,22 @@ async function checkCooldowns() {
     const now = Date.now();
     const cooldowns = getCooldowns();
 
+    if (cooldowns.length > 0) {
+        // Find the soonest expiration to show in status
+        const soonest = cooldowns.reduce((prev, curr) => (prev.endTime < curr.endTime) ? prev : curr);
+        const remainingMs = soonest.endTime - now;
+
+        if (remainingMs > 0) {
+            const hours = Math.floor(remainingMs / (1000 * 60 * 60));
+            const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
+            client.user.setActivity(`Cooldown: ${hours}h ${minutes}m left`, { type: ActivityType.Custom });
+        } else {
+            client.user.setActivity('Recording videos for OnlyFans', { type: ActivityType.Custom });
+        }
+    } else {
+        client.user.setActivity('Recording videos for OnlyFans', { type: ActivityType.Custom });
+    }
+
     for (const cd of cooldowns) {
         if (now >= cd.endTime) {
             try {
@@ -67,6 +83,17 @@ client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
     try {
+        // Global Cooldown Block
+        if (interaction.commandName !== 'balance') {
+            const existing = getCooldowns().find(c => c.userId === interaction.user.id);
+            if (existing) {
+                return interaction.reply({
+                    content: `You are on cooldown! You cannot assign me any new tasks until **<t:${Math.floor(existing.endTime / 1000)}:R>**.`,
+                    ephemeral: true
+                });
+            }
+        }
+
         if (interaction.commandName === 'remind') {
             const timeStr = interaction.options.getString('time');
             const message = interaction.options.getString('message');
