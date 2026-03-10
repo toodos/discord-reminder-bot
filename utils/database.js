@@ -69,4 +69,14 @@ function clearCooldown(userId, endTime) {
     saveData(data);
 }
 
-module.exports = { getUser, addMoney, removeMoney, setCooldown, getCooldowns, clearCooldown };
+function removeCooldownByUserId(userId) {
+    const data = getData();
+    data.cooldowns = data.cooldowns.filter(c => c.userId !== userId);
+    saveData(data);
+}
+
+function getAllUsers() {
+    return getData().users;
+}
+
+module.exports = { getUser, addMoney, removeMoney, setCooldown, getCooldowns, clearCooldown, removeCooldownByUserId, getAllUsers };

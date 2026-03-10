@@ -100,6 +100,19 @@ const commands = [
             }
         ],
     },
+    {
+        name: 'remove_cd',
+        description: 'Remove a cooldown from a user',
+        default_member_permissions: PermissionFlagsBits.Administrator.toString(),
+        options: [
+            {
+                name: 'user',
+                description: 'The user to remove the cooldown from',
+                type: 6, // USER
+                required: true,
+            }
+        ],
+    },
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

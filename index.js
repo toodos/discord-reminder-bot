@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Partials, PermissionFlagsBits, ActivityType } = require('discord.js');
 const { parseTime } = require('./utils/timer');
-const { getUser, addMoney, removeMoney, setCooldown, getCooldowns, clearCooldown } = require('./utils/database');
+const { getUser, addMoney, removeMoney, setCooldown, getCooldowns, clearCooldown, removeCooldownByUserId, getAllUsers } = require('./utils/database');
 
 const client = new Client({
     intents: [
@@ -16,10 +16,61 @@ client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
     client.user.setActivity('Recording videos for OnlyFans', { type: ActivityType.Custom });
 
-    // Check for expired cooldowns every minute
-    setInterval(checkCooldowns, 60000);
-    checkCooldowns(); // Run once on startup
+    // Initial check and setup timers for all existing cooldowns
+    const cooldowns = getCooldowns();
+    const now = Date.now();
+    for (const cd of cooldowns) {
+        const remaining = cd.endTime - now;
+        if (remaining <= 0) {
+            processExpiredCooldown(cd);
+        } else {
+            setTimeout(() => processExpiredCooldown(cd), remaining);
+        }
+    }
+
+    // Interval for status updates and safety check
+    setInterval(checkCooldowns, 30000);
 });
+
+async function processExpiredCooldown(cd) {
+    // Check if it still exists in DB to prevent double processing
+    const currentCooldowns = getCooldowns();
+    const stillExists = currentCooldowns.some(c => c.userId === cd.userId && c.endTime === cd.endTime);
+    if (!stillExists) return;
+
+    try {
+        const user = await client.users.fetch(cd.userId);
+        const channel = await client.channels.fetch(cd.channelId);
+        let initiator;
+        if (cd.initiatorId) {
+            try {
+                initiator = await client.users.fetch(cd.initiatorId);
+            } catch (e) {
+                console.error(`Could not fetch initiator ${cd.initiatorId}`);
+            }
+        }
+
+        // DM to target user
+        try {
+            await user.send("you can be assigned the task now");
+        } catch (e) {
+            console.error(`Could not DM user ${cd.userId}`);
+        }
+
+        // Channel Ping
+        try {
+            const mention = initiator ? `${user} and ${initiator}` : `${user}`;
+            await channel.send(`${mention}, you can be assigned the task now`);
+        } catch (e) {
+            console.error(`Could not send message to channel ${cd.channelId}`);
+        }
+
+        clearCooldown(cd.userId, cd.endTime);
+    } catch (error) {
+        console.error(`Error processing cooldown for ${cd.userId}:`, error);
+        clearCooldown(cd.userId, cd.endTime);
+    }
+}
 
 async function checkCooldowns() {
     const now = Date.now();
@@ -36,46 +87,11 @@ async function checkCooldowns() {
             client.user.setActivity(`Cooldown: ${hours}h ${minutes}m left`, { type: ActivityType.Custom });
         } else {
             client.user.setActivity('Recording videos for OnlyFans', { type: ActivityType.Custom });
+            // Process any that missed their timer
+            processExpiredCooldown(soonest);
         }
     } else {
         client.user.setActivity('Recording videos for OnlyFans', { type: ActivityType.Custom });
-    }
-
-    for (const cd of cooldowns) {
-        if (now >= cd.endTime) {
-            try {
-                const user = await client.users.fetch(cd.userId);
-                const channel = await client.channels.fetch(cd.channelId);
-                let initiator;
-                if (cd.initiatorId) {
-                    try {
-                        initiator = await client.users.fetch(cd.initiatorId);
-                    } catch (e) {
-                        console.error(`Could not fetch initiator ${cd.initiatorId}`);
-                    }
-                }
-
-                // DM to target user
-                try {
-                    await user.send("you can be assigned the task now");
-                } catch (e) {
-                    console.error(`Could not DM user ${cd.userId}`);
-                }
-
-                // Channel Ping
-                try {
-                    const mention = initiator ? `${user} and ${initiator}` : `${user}`;
-                    await channel.send(`${mention}, you can be assigned the task now`);
-                } catch (e) {
-                    console.error(`Could not send message to channel ${cd.channelId}`);
-                }
-
-                clearCooldown(cd.userId, cd.endTime);
-            } catch (error) {
-                console.error(`Error processing cooldown for ${cd.userId}:`, error);
-                clearCooldown(cd.userId, cd.endTime);
-            }
-        }
     }
 }
 
@@ -146,8 +162,21 @@ client.on('interactionCreate', async interaction => {
         } else if (interaction.commandName === 'balance') {
             const targetUser = interaction.options.getUser('user') || interaction.user;
             const userData = getUser(targetUser.id);
+            const allUsersData = getAllUsers();
 
-            await interaction.reply({ content: `${targetUser.tag}'s current balance is **₹${userData.balance}**.` });
+            // Create leaderboard array and sort by balance
+            const leaderboard = Object.entries(allUsersData)
+                .map(([userId, data]) => ({ userId, balance: data.balance }))
+                .sort((a, b) => b.balance - a.balance)
+                .slice(0, 10);
+
+            let leaderboardStr = "**🏆 Economy Leaderboard (Top 10)**\n";
+            leaderboard.forEach((entry, index) => {
+                leaderboardStr += `${index + 1}. <@${entry.userId}>: **₹${entry.balance}**\n`;
+            });
+
+            const replyMsg = `${targetUser.tag}'s current balance is **₹${userData.balance}**.\n\n${leaderboardStr}`;
+            await interaction.reply({ content: replyMsg });
         } else if (interaction.commandName === 'remove_money') {
             const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
             if (!isAdmin) {
@@ -182,10 +211,24 @@ client.on('interactionCreate', async interaction => {
             }
 
             const endTime = Date.now() + duration;
+            const cooldownData = { userId: targetUser.id, channelId: interaction.channelId, endTime, initiatorId: interaction.user.id };
 
             setCooldown(targetUser.id, interaction.channelId, endTime, interaction.user.id);
 
+            // Set immediate timer for this interaction sesssion
+            setTimeout(() => processExpiredCooldown(cooldownData), duration);
+
             await interaction.reply({ content: `Cooldown set for ${targetUser.tag}. you will be assigned task after **<t:${Math.floor(endTime / 1000)}:R>**. Both you and they will be notified when it ends.` });
+        } else if (interaction.commandName === 'remove_cd') {
+            const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
+            if (!isAdmin) {
+                return interaction.reply({ content: 'Only Administrators can use this command!', ephemeral: true });
+            }
+
+            const targetUser = interaction.options.getUser('user');
+            removeCooldownByUserId(targetUser.id);
+
+            await interaction.reply({ content: `Successfully removed all active cooldowns for ${targetUser.tag}.` });
         }
     } catch (error) {
         console.error('Error handling interaction:', error);
