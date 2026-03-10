@@ -113,6 +113,22 @@ const commands = [
             }
         ],
     },
+    {
+        name: 'rank',
+        description: 'View your or another user\'s rank and XP progress',
+        options: [
+            {
+                name: 'user',
+                description: 'The user to view the rank of',
+                type: 6, // USER
+                required: false,
+            }
+        ],
+    },
+    {
+        name: 'daily',
+        description: 'Claim your daily rupee reward',
+    }
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
