@@ -205,9 +205,19 @@ client.on('interactionCreate', async interaction => {
             }
 
             const embed = new EmbedBuilder()
-                .setColor('#f1c40f')
-                .setAuthor({ name: `${targetUser.tag}'s Balance`, iconURL: targetUser.displayAvatarURL() })
-                .setDescription(`Current Balance: **₹${userData.balance}**\n\n**🏆 Top Ballers**\n${leaderboardStr || "No data yet!"}`)
+                .setColor('#FFD700')
+                .setAuthor({
+                    name: `${targetUser.username}'s Personal Vault`,
+                    iconURL: targetUser.displayAvatarURL({ dynamic: true })
+                })
+                .setThumbnail('https://cdn-icons-png.flaticon.com/512/2489/2489756.png') // Gold bars icon
+                .addFields(
+                    { name: '💰 Current Wealth', value: `\`₹${userData.balance.toLocaleString()}\``, inline: true },
+                    { name: '📊 Global Rank', value: `\`#${userRank}\``, inline: true },
+                    { name: '\u200B', value: '\u200B', inline: false }, // Spacer
+                    { name: '🏆 Top Ballers (Global)', value: leaderboardStr || "*No records found.*", inline: false }
+                )
+                .setFooter({ text: 'Economy System Premium v2.0', iconURL: client.user.displayAvatarURL() })
                 .setTimestamp();
 
             await interaction.reply({ embeds: [embed] });
