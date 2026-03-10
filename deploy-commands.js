@@ -82,6 +82,24 @@ const commands = [
             }
         ],
     },
+    {
+        name: 'cd',
+        description: 'Set a 24-hour cooldown for a user',
+        options: [
+            {
+                name: 'user',
+                description: 'The user to put on cooldown',
+                type: 6, // USER
+                required: true,
+            },
+            {
+                name: 'time',
+                description: 'The duration of the cooldown (e.g., 12h, 1d). Defaults to 24h.',
+                type: 3, // STRING
+                required: false,
+            }
+        ],
+    },
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

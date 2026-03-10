@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Partials, PermissionFlagsBits, ActivityType } = require('discord.js');
 const { parseTime } = require('./utils/timer');
-const { getUser, addMoney, removeMoney } = require('./utils/database');
+const { getUser, addMoney, removeMoney, setCooldown, getCooldowns, clearCooldown } = require('./utils/database');
 
 const client = new Client({
     intents: [
@@ -15,7 +15,53 @@ const client = new Client({
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
     client.user.setActivity('Recording videos for OnlyFans', { type: ActivityType.Custom });
+
+    // Check for expired cooldowns every minute
+    setInterval(checkCooldowns, 60000);
+    checkCooldowns(); // Run once on startup
 });
+
+async function checkCooldowns() {
+    const now = Date.now();
+    const cooldowns = getCooldowns();
+
+    for (const cd of cooldowns) {
+        if (now >= cd.endTime) {
+            try {
+                const user = await client.users.fetch(cd.userId);
+                const channel = await client.channels.fetch(cd.channelId);
+                let initiator;
+                if (cd.initiatorId) {
+                    try {
+                        initiator = await client.users.fetch(cd.initiatorId);
+                    } catch (e) {
+                        console.error(`Could not fetch initiator ${cd.initiatorId}`);
+                    }
+                }
+
+                // DM to target user
+                try {
+                    await user.send("Your cooldown is over!");
+                } catch (e) {
+                    console.error(`Could not DM user ${cd.userId}`);
+                }
+
+                // Channel Ping
+                try {
+                    const mention = initiator ? `${user} and ${initiator}` : `${user}`;
+                    await channel.send(`${mention}, the cooldown is over!`);
+                } catch (e) {
+                    console.error(`Could not send message to channel ${cd.channelId}`);
+                }
+
+                clearCooldown(cd.userId, cd.endTime);
+            } catch (error) {
+                console.error(`Error processing cooldown for ${cd.userId}:`, error);
+                clearCooldown(cd.userId, cd.endTime);
+            }
+        }
+    }
+}
 
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
@@ -90,6 +136,29 @@ client.on('interactionCreate', async interaction => {
 
             const newBalance = removeMoney(targetUser.id, amount);
             await interaction.reply({ content: `Removed **₹${amount}** from ${targetUser.tag}'s balance. New balance: **₹${newBalance}**` });
+        } else if (interaction.commandName === 'cd') {
+            const targetUser = interaction.options.getUser('user');
+            const timeStr = interaction.options.getString('time') || '24h';
+
+            // Check for existing cooldown
+            const existing = getCooldowns().find(c => c.userId === targetUser.id);
+            if (existing) {
+                return interaction.reply({
+                    content: `${targetUser.tag} is already on cooldown! It expires **<t:${Math.floor(existing.endTime / 1000)}:R>**.`,
+                    ephemeral: true
+                });
+            }
+
+            const duration = parseTime(timeStr);
+            if (!duration) {
+                return interaction.reply({ content: 'Invalid time format! Please use something like "1h", "12h", or "1d".', ephemeral: true });
+            }
+
+            const endTime = Date.now() + duration;
+
+            setCooldown(targetUser.id, interaction.channelId, endTime, interaction.user.id);
+
+            await interaction.reply({ content: `Cooldown set for ${targetUser.tag}. Expires **<t:${Math.floor(endTime / 1000)}:R>**. Both you and they will be notified when it ends.` });
         }
     } catch (error) {
         console.error('Error handling interaction:', error);

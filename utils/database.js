@@ -11,11 +11,13 @@ if (!fs.existsSync(dataDir)) {
 
 // Ensure database file exists
 if (!fs.existsSync(DB_PATH)) {
-    fs.writeFileSync(DB_PATH, JSON.stringify({ users: {} }, null, 2));
+    fs.writeFileSync(DB_PATH, JSON.stringify({ users: {}, cooldowns: [] }, null, 2));
 }
 
 function getData() {
-    return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    if (!data.cooldowns) data.cooldowns = [];
+    return data;
 }
 
 function saveData(data) {
@@ -47,11 +49,24 @@ function removeMoney(userId, amount) {
         data.users[userId] = { balance: 0 };
     }
     data.users[userId].balance -= amount;
-    // Allow negative balance or floor at 0? 
-    // Usually economy bots allow negative or floor at 0. Let's floor at 0 for safety but user didn't specify.
-    // Let's just allow it for now as "debt".
     saveData(data);
     return data.users[userId].balance;
 }
 
-module.exports = { getUser, addMoney, removeMoney };
+function setCooldown(userId, channelId, endTime, initiatorId) {
+    const data = getData();
+    data.cooldowns.push({ userId, channelId, endTime, initiatorId });
+    saveData(data);
+}
+
+function getCooldowns() {
+    return getData().cooldowns;
+}
+
+function clearCooldown(userId, endTime) {
+    const data = getData();
+    data.cooldowns = data.cooldowns.filter(c => !(c.userId === userId && c.endTime === endTime));
+    saveData(data);
+}
+
+module.exports = { getUser, addMoney, removeMoney, setCooldown, getCooldowns, clearCooldown };
