@@ -165,16 +165,22 @@ client.on('interactionCreate', async interaction => {
             const allUsersData = getAllUsers();
 
             // Create leaderboard array and sort by balance
-            const leaderboard = Object.entries(allUsersData)
+            const sortedUsers = Object.entries(allUsersData)
                 .map(([userId, data]) => ({ userId, balance: data.balance }))
-                .sort((a, b) => b.balance - a.balance)
-                .slice(0, 3);
+                .sort((a, b) => b.balance - a.balance);
+
+            const leaderboard = sortedUsers.slice(0, 3);
+            const userRank = sortedUsers.findIndex(u => u.userId === targetUser.id) + 1;
 
             const trophies = ['🥇', '🥈', '🥉'];
             let leaderboardStr = "**🏆 Economy Leaderboard (Top 3)**\n";
             leaderboard.forEach((entry, index) => {
                 leaderboardStr += `${trophies[index]} <@${entry.userId}>: **₹${entry.balance}**\n`;
             });
+
+            if (userRank > 3) {
+                leaderboardStr += `\n**Your Position: #${userRank}**`;
+            }
 
             const replyMsg = `${targetUser.tag}'s current balance is **₹${userData.balance}**.\n\n${leaderboardStr}`;
             await interaction.reply({ content: replyMsg });
