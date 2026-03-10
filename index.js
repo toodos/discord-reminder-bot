@@ -185,7 +185,7 @@ client.on('interactionCreate', async interaction => {
 
             setCooldown(targetUser.id, interaction.channelId, endTime, interaction.user.id);
 
-            await interaction.reply({ content: `Cooldown set for ${targetUser.tag}. Expires **<t:${Math.floor(endTime / 1000)}:R>**. Both you and they will be notified when it ends.` });
+            await interaction.reply({ content: `Cooldown set for ${targetUser.tag}. you will be assigned task after **<t:${Math.floor(endTime / 1000)}:R>**. Both you and they will be notified when it ends.` });
         }
     } catch (error) {
         console.error('Error handling interaction:', error);
