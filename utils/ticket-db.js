@@ -1,15 +1,14 @@
 /**
  * Ticket System Database Module
- * Handles SQLite initialization and all query functions for the ticket system.
+ * Migrated to utils/ticket-db.js
  */
 const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-const dbDir = path.join(__dirname);
-if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
-
-const db = new Database(path.join(dbDir, 'tickets.db'));
+// Path relative to root of the bot
+const dbPath = path.join(__dirname, '../tickets.db');
+const db = new Database(dbPath);
 
 // Initialize Tables
 db.exec(`
@@ -81,7 +80,6 @@ db.exec(`
 `);
 
 module.exports = {
-    // Guild Config
     getGuildConfig: (guildId) => db.prepare('SELECT * FROM guilds WHERE guildId = ?').get(guildId) || {},
     setGuildConfig: (guildId, data) => {
         const current = db.prepare('SELECT * FROM guilds WHERE guildId = ?').get(guildId);
@@ -98,13 +96,9 @@ module.exports = {
         db.prepare('UPDATE guilds SET ticketCount = ticketCount + 1 WHERE guildId = ?').run(guildId);
         return db.prepare('SELECT ticketCount FROM guilds WHERE guildId = ?').get(guildId).ticketCount;
     },
-
-    // Categories
     getCategories: (guildId) => db.prepare('SELECT * FROM categories WHERE guildId = ?').all(guildId),
     getCategory: (id) => db.prepare('SELECT * FROM categories WHERE id = ?').get(id),
     createCategory: (data) => db.prepare('INSERT INTO categories (id, guildId, name, emoji, roles, categoryId, maxTickets, questions) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(data.id, data.guildId, data.name, data.emoji, JSON.stringify(data.roles), data.categoryId, data.maxTickets, JSON.stringify(data.questions)),
-
-    // Tickets
     createTicket: (data) => db.prepare('INSERT INTO tickets (channelId, guildId, userId, categoryId, createdAt, answers) VALUES (?, ?, ?, ?, ?, ?)').run(data.channelId, data.guildId, data.userId, data.categoryId, data.createdAt, JSON.stringify(data.answers)),
     getTicket: (channelId) => db.prepare('SELECT * FROM tickets WHERE channelId = ?').get(channelId),
     updateTicket: (channelId, data) => {
@@ -113,19 +107,13 @@ module.exports = {
         db.prepare(`UPDATE tickets SET ${setClause} WHERE channelId = ?`).run(...Object.values(data), channelId);
     },
     getUserActiveTickets: (userId, guildId) => db.prepare('SELECT * FROM tickets WHERE userId = ? AND guildId = ? AND status = "open"').all(userId, guildId),
-
-    // Blacklist
     isBlacklisted: (guildId, userId) => !!db.prepare('SELECT 1 FROM blacklist WHERE guildId = ? AND userId = ?').get(guildId, userId),
     addToBlacklist: (guildId, userId) => db.prepare('INSERT OR IGNORE INTO blacklist (guildId, userId) VALUES (?, ?)').run(guildId, userId),
     removeFromBlacklist: (guildId, userId) => db.prepare('DELETE FROM blacklist WHERE guildId = ? AND userId = ?').run(guildId, userId),
-
-    // Tags
     getTag: (guildId, name) => db.prepare('SELECT * FROM tags WHERE guildId = ? AND name = ?').get(guildId, name),
     getTags: (guildId) => db.prepare('SELECT * FROM tags WHERE guildId = ?').all(guildId),
     createTag: (guildId, name, content) => db.prepare('INSERT OR REPLACE INTO tags (guildId, name, content) VALUES (?, ?, ?)').run(guildId, name, content),
     deleteTag: (guildId, name) => db.prepare('DELETE FROM tags WHERE guildId = ? AND name = ?').run(guildId, name),
-
-    // Stats
     updateStaffStats: (guildId, staffId, rating) => {
         db.prepare('INSERT OR IGNORE INTO staff_stats (guildId, staffId) VALUES (?, ?)').run(guildId, staffId);
         if (rating) {

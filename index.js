@@ -1,5 +1,8 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Partials, PermissionFlagsBits, ActivityType, EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const ticketDb = require('./utils/ticket-db');
+const ticketLogic = require('./utils/ticket-logic');
+const { ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { parseTime } = require('./utils/timer');
 const {
     getUser, addMoney, removeMoney, setCooldown, getCooldowns,
@@ -354,6 +357,163 @@ client.on('interactionCreate', async interaction => {
                 .setTimestamp();
 
             await interaction.reply({ embeds: [embed], files: [file] });
+        }
+
+        // --- Ticket System Integration ---
+        
+        // Slash Commands for Tickets
+        if (interaction.isChatInputCommand()) {
+            if (interaction.commandName === 'setup') {
+                const adminRole = interaction.options.getRole('admin_role');
+                const logChannel = interaction.options.getChannel('log_channel');
+                const transcriptChannel = interaction.options.getChannel('transcript_channel');
+
+                ticketDb.setGuildConfig(interaction.guildId, {
+                    adminRoleId: adminRole.id,
+                    logChannelId: logChannel.id,
+                    transcriptChannelId: transcriptChannel.id
+                });
+
+                return await interaction.reply({
+                    content: `✅ **Ticket System Configured!**\n\n- **Admin Role:** ${adminRole}\n- **Logs:** ${logChannel}\n- **Transcripts:** ${transcriptChannel}\n\nNow use \`/category create\` to define your departments! ✨`,
+                    ephemeral: true
+                });
+            }
+
+            if (interaction.commandName === 'panel') {
+                const title = interaction.options.getString('title');
+                const description = interaction.options.getString('description');
+                const channel = interaction.options.getChannel('channel') || interaction.channel;
+
+                const categories = ticketDb.getCategories(interaction.guildId);
+                if (categories.length === 0) {
+                    return interaction.reply({ content: 'You must first create at least one category using `/category create`!', ephemeral: true });
+                }
+
+                const embed = new EmbedBuilder()
+                    .setColor('#ff85a2')
+                    .setTitle(title)
+                    .setDescription(description)
+                    .setTimestamp();
+
+                const rows = [];
+                let currentRow = new ActionRowBuilder();
+
+                categories.forEach((cat, i) => {
+                    if (i > 0 && i % 5 === 0) {
+                        rows.push(currentRow);
+                        currentRow = new ActionRowBuilder();
+                    }
+                    currentRow.addComponents(
+                        new ButtonBuilder()
+                            .setCustomId(`ticket_open_${cat.id}`)
+                            .setLabel(cat.name)
+                            .setEmoji(cat.emoji)
+                            .setStyle(ButtonStyle.Primary)
+                    );
+                });
+                rows.push(currentRow);
+
+                await channel.send({ embeds: [embed], components: rows });
+                return await interaction.reply({ content: `Panel successfully created in ${channel}! ✨`, ephemeral: true });
+            }
+
+            if (interaction.commandName === 'category') {
+                const name = interaction.options.getString('name');
+                const emoji = interaction.options.getString('emoji');
+                const category = interaction.options.getChannel('category');
+                const role = interaction.options.getRole('support_role');
+
+                const id = Math.random().toString(36).substring(2, 9);
+
+                ticketDb.createCategory({
+                    id: id,
+                    guildId: interaction.guildId,
+                    name: name,
+                    emoji: emoji,
+                    roles: [role.id],
+                    categoryId: category.id,
+                    maxTickets: 1,
+                    questions: []
+                });
+
+                return await interaction.reply({
+                    content: `✅ Created category **${name}** ${emoji}!\nNext step: Run \`/panel create\` to show it to users! ✨`,
+                    ephemeral: true
+                });
+            }
+
+            if (interaction.commandName === 'close') {
+                return await ticketLogic.closeTicket(interaction);
+            }
+        }
+
+        // Ticket Panel Button Click
+        if (interaction.isButton() && interaction.customId.startsWith('ticket_open_')) {
+            const categoryId = interaction.customId.replace('ticket_open_', '');
+            const category = ticketDb.getCategory(categoryId);
+            if (!category) return interaction.reply({ content: 'Invalid category!', ephemeral: true });
+
+            if (ticketDb.isBlacklisted(interaction.guildId, interaction.user.id)) {
+                return interaction.reply({ content: 'You are blacklisted from opening tickets.', ephemeral: true });
+            }
+
+            const active = ticketDb.getUserActiveTickets(interaction.user.id, interaction.guildId);
+            if (active.length >= category.maxTickets) {
+                return interaction.reply({ content: `You already have ${active.length} open ticket(s) in this category.`, ephemeral: true });
+            }
+
+            const questions = JSON.parse(category.questions || '[]');
+            if (questions.length > 0) {
+                const modal = new ModalBuilder()
+                    .setCustomId(`ticket_modal_${categoryId}`)
+                    .setTitle(`${category.name} Information`);
+
+                questions.forEach((q, i) => {
+                    const input = new TextInputBuilder()
+                        .setCustomId(`question_${i}`)
+                        .setLabel(q.label)
+                        .setStyle(TextInputStyle.Short)
+                        .setRequired(true);
+                    modal.addComponents(new ActionRowBuilder().addComponents(input));
+                });
+
+                return await interaction.showModal(modal);
+            }
+
+            return await ticketLogic.createTicket(interaction, category, {});
+        }
+
+        // Modal Submission
+        if (interaction.isModalSubmit() && interaction.customId.startsWith('ticket_modal_')) {
+            const categoryId = interaction.customId.replace('ticket_modal_', '');
+            const category = ticketDb.getCategory(categoryId);
+            const questions = JSON.parse(category.questions || '[]');
+            
+            const answers = {};
+            questions.forEach((q, i) => {
+                answers[q.label] = interaction.fields.getTextInputValue(`question_${i}`);
+            });
+
+            return await ticketLogic.createTicket(interaction, category, answers);
+        }
+
+        // Management Buttons
+        if (interaction.isButton()) {
+            const ticket = ticketDb.getTicket(interaction.channelId);
+            if (!ticket) return;
+
+            switch (interaction.customId) {
+                case 'ticket_close_prompt':
+                    await ticketLogic.closePrompt(interaction);
+                    break;
+                case 'ticket_close_confirm':
+                    await ticketLogic.closeTicket(interaction);
+                    break;
+                case 'ticket_claim':
+                    await ticketLogic.claimTicket(interaction);
+                    break;
+            }
         }
     } catch (error) {
         console.error('Error handling interaction:', error);
