@@ -36,13 +36,26 @@ const ticketCommands = [
         options: [
             {
                 name: 'create',
-                description: 'Create a new ticket category',
-                type: 1,
+                description: 'Create a ticket category 🎀',
+                type: 1, // SUB_COMMAND
                 options: [
-                    { name: 'name', description: 'Category name', type: 3, required: true },
-                    { name: 'emoji', description: 'Emoji for the category', type: 3, required: true },
-                    { name: 'category', description: 'Discord category to create tickets in', type: 7, required: true },
-                    { name: 'support_role', description: 'Role assigned to this category', type: 8, required: true }
+                    { name: 'name', description: 'The name of the ticket 🌷', type: 3, required: true },
+                    { name: 'emoji', description: 'The emoji for the button ✨', type: 3, required: true },
+                    { name: 'category', description: 'The Discord Category to open tickets in 🌸', type: 7, required: true }, // Assuming type 7 is sufficient for GuildCategory
+                    { name: 'support_role', description: 'The role that can see these tickets 🎀', type: 8, required: true }
+                ]
+            },
+            {
+                name: 'list',
+                description: 'List all ticket categories 🌸',
+                type: 1 // SUB_COMMAND
+            },
+            {
+                name: 'delete',
+                description: 'Delete a ticket category 🗑️',
+                type: 1, // SUB_COMMAND
+                options: [
+                    { name: 'id', description: 'The category ID to delete (find it in /category list) 🍡', type: 3, required: true }
                 ]
             }
         ]

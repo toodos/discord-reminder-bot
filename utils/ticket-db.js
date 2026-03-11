@@ -98,6 +98,7 @@ module.exports = {
     getCategories: (guildId) => db.prepare('SELECT * FROM categories WHERE guildId = ?').all(guildId),
     getCategory: (id) => db.prepare('SELECT * FROM categories WHERE id = ?').get(id),
     createCategory: (data) => db.prepare('INSERT INTO categories (id, guildId, name, emoji, roles, categoryId, maxTickets, questions) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(data.id, data.guildId, data.name, data.emoji, JSON.stringify(data.roles), data.categoryId, data.maxTickets, JSON.stringify(data.questions)),
+    deleteCategory: (id) => db.prepare('DELETE FROM categories WHERE id = ?').run(id),
     createTicket: (data) => db.prepare('INSERT INTO tickets (channelId, guildId, userId, categoryId, createdAt, answers) VALUES (?, ?, ?, ?, ?, ?)').run(data.channelId, data.guildId, data.userId, data.categoryId, data.createdAt, JSON.stringify(data.answers)),
     getTicket: (channelId) => db.prepare('SELECT * FROM tickets WHERE channelId = ?').get(channelId),
     updateTicket: (channelId, data) => {

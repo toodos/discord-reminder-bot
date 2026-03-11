@@ -444,6 +444,28 @@ client.on('interactionCreate', async interaction => {
                         content: `✅ Created category **${name}** ${emoji}!\nNext step: Run \`/panel create\` to show it to users! ✨`,
                         ephemeral: true
                     });
+                } else if (sub === 'list') {
+                    const categories = ticketDb.getCategories(interaction.guildId);
+                    if (categories.length === 0) {
+                        return interaction.reply({ content: 'No ticket categories found! 🌷', ephemeral: true });
+                    }
+
+                    const embed = new EmbedBuilder()
+                        .setColor('#ffc8dd')
+                        .setTitle('📋 Ticket Categories 🌸')
+                        .setDescription(categories.map(c => `**${c.name}** ${c.emoji} — ID: \`${c.id}\``).join('\n'))
+                        .setTimestamp();
+
+                    return interaction.reply({ embeds: [embed], ephemeral: true });
+                } else if (sub === 'delete') {
+                    const id = interaction.options.getString('id');
+                    const category = ticketDb.getCategory(id);
+                    if (!category || category.guildId !== interaction.guildId) {
+                        return interaction.reply({ content: 'I couldn\'t find that category ID! 🍭', ephemeral: true });
+                    }
+
+                    ticketDb.deleteCategory(id);
+                    return interaction.reply({ content: `✅ Successfully deleted the **${category.name}** category! 🗑️✨`, ephemeral: true });
                 }
             }
 

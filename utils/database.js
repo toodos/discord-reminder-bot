@@ -36,7 +36,9 @@ function getUser(userId) {
 
 function addMoney(userId, amount) {
     const data = getData();
-    getUser(userId);
+    if (!data.users[userId]) {
+        data.users[userId] = { balance: 0 };
+    }
     data.users[userId].balance += amount;
     saveData(data);
     return data.users[userId].balance;
@@ -44,7 +46,9 @@ function addMoney(userId, amount) {
 
 function removeMoney(userId, amount) {
     const data = getData();
-    getUser(userId);
+    if (!data.users[userId]) {
+        data.users[userId] = { balance: 0 };
+    }
     data.users[userId].balance -= amount;
     saveData(data);
     return data.users[userId].balance;
