@@ -2,7 +2,7 @@
  * Ticket System Logic Handler
  * Migrated to utils/ticket-logic.js
  */
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionFlagsBits } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, PermissionFlagsBits, UserSelectMenuBuilder, ComponentType } = require('discord.js');
 const ticketDb = require('./ticket-db');
 const transcript = require('discord-html-transcripts');
 
