@@ -15,6 +15,7 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.MessageContent,
     ],
     partials: [Partials.Channel],
 });
@@ -562,6 +563,122 @@ client.on('interactionCreate', async interaction => {
             await interaction.followUp({ content: errorMessage, ephemeral: true }).catch(() => {});
         } else {
             await interaction.reply({ content: errorMessage, ephemeral: true }).catch(() => {});
+        }
+    }
+});
+
+client.on('messageCreate', async message => {
+    if (message.author.bot || !message.guild) return;
+
+    // Check if the channel is a ticket
+    const ticket = ticketDb.getTicket(message.channel.id);
+    if (!ticket) return;
+
+    // debug log to console (can be removed once verified)
+    console.log(`[LinkCheck] Message in ticket ${message.channel.name} by ${message.author.tag}: "${message.content}"`);
+
+    // Check if the user is an admin
+    const config = ticketDb.getGuildConfig(message.guild.id);
+    const isAdmin = message.member.permissions.has(PermissionFlagsBits.Administrator) || 
+                  (config && config.adminRoleId && message.member.roles.cache.has(config.adminRoleId));
+
+    if (isAdmin) return;
+
+    // Link detection regex
+    const urlRegex = /https?:\/\/[^\s]+/;
+    const urlMatch = message.content.match(urlRegex);
+    
+    if (urlMatch) {
+        const url = urlMatch[0];
+        
+        // Reddit Comment Verification logic
+        // Updated regex to handle more URL variants (sh.reddit, old.reddit, etc.)
+        const redditCommentRegex = /(?:reddit\.com|redd\.it)\/(?:r\/[^\/]+\/)?comments\/[^\/]+(?:\/[^\/]+\/([a-z0-9]+))?/i;
+        const redditMatch = url.match(redditCommentRegex);
+
+        if (redditMatch) {
+            try {
+                // The comment ID is either in the last group or can be inferred
+                let commentId = redditMatch[1];
+                
+                // If it's a short link or specific format, we might need to extract ID differently
+                if (!commentId) {
+                    const parts = url.split('/');
+                    const lastPart = parts[parts.length - 1] || parts[parts.length - 2];
+                    if (lastPart && lastPart.length >= 6) commentId = lastPart;
+                }
+
+                console.log(`[LinkCheck] Verifying Reddit Comment ID: ${commentId || 'Unknown'}`);
+
+                // Use .json endpoint for Reddit
+                const baseUrl = url.split('?')[0].replace(/\/$/, '');
+                const jsonUrl = `${baseUrl}.json`;
+                
+                const response = await fetch(jsonUrl, {
+                    headers: { 'User-Agent': 'DiscordBot/1.0 (Reddit Verification)' }
+                });
+
+                if (!response.ok) {
+                    console.log(`[LinkCheck] Reddit URL returned status: ${response.status}`);
+                    if (response.status === 404) {
+                        await message.react('❌');
+                        return;
+                    }
+                    throw new Error(`Reddit API returned ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Recursive function to find comment by ID
+                function findComment(children, id) {
+                    for (const child of children) {
+                        if (child.data.id === id || (child.data.name && child.data.name.endsWith(id))) return child.data;
+                        if (child.data.replies && child.data.replies.data && child.data.replies.data.children) {
+                            const found = findComment(child.data.replies.data.children, id);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                }
+
+                let isShowing = false;
+                // If commentId is missing, it might be a post link. For now, assume it's a comment link.
+                if (commentId && Array.isArray(data) && data[1] && data[1].data) {
+                    const comment = findComment(data[1].data.children, commentId);
+                    if (comment) {
+                        // Stricter check for common removal markers
+                        isShowing = comment.author !== '[deleted]' && 
+                                    comment.body !== '[removed]' && 
+                                    comment.body !== '[deleted]' &&
+                                    !comment.removed_by_category;
+                        
+                        console.log(`[LinkCheck] Comment status - Author: ${comment.author}, Body Snippet: ${comment.body?.substring(0, 20)}`);
+                    } else {
+                        console.log(`[LinkCheck] Comment ID ${commentId} not found in JSON tree.`);
+                    }
+                }
+
+                if (isShowing) {
+                    await message.react('✅');
+                    console.log(`[LinkCheck] Verified Reddit comment as SHOWING`);
+                } else {
+                    await message.react('❌');
+                    console.log(`[LinkCheck] Reddit comment is REMOVED/DELETED or NOT FOUND`);
+                }
+
+            } catch (error) {
+                console.error('[LinkCheck] Reddit Verification Error:', error);
+                // On real errors (not 404), maybe still react with a warning or just skip
+                await message.react('❓').catch(() => {}); 
+            }
+        } else {
+            // Non-Reddit link or not a comment link, just react with ✅
+            try {
+                await message.react('✅');
+                console.log(`[LinkCheck] Reacted with ✅ to non-Reddit link in ${message.channel.name}`);
+            } catch (error) {
+                console.error('[LinkCheck] Failed to react to message:', error);
+            }
         }
     }
 });
