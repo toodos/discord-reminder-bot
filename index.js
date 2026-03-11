@@ -592,14 +592,14 @@ client.on('messageCreate', async message => {
         const url = urlMatch[0];
         
         // Reddit Comment Verification logic
-        // Updated regex to handle more URL variants (sh.reddit, old.reddit, etc.)
-        const redditCommentRegex = /(?:reddit\.com|redd\.it)\/(?:r\/[^\/]+\/)?comments\/[^\/]+(?:\/[^\/]+\/([a-z0-9]+))?/i;
+        // Updated regex to handle ALL Reddit variants (www, sh, re, old, etc.)
+        const redditCommentRegex = /(?:[a-z0-9-]+\.)?(?:reddit\.com|redd\.it)\/(?:r\/[^\/]+\/)?comments\/[^\/]+(?:\/[^\/]+\/([a-z0-9]+))?/i;
         const redditMatch = url.match(redditCommentRegex);
 
         if (redditMatch) {
             try {
-                // Use old.reddit.com for JSON as it's more resilient to blocks
-                const baseUrl = url.split('?')[0].replace(/\/$/, '').replace('www.reddit.com', 'old.reddit.com');
+                // Force any reddit subdomain to old.reddit.com for reliable JSON
+                const baseUrl = url.split('?')[0].replace(/\/$/, '').replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://old.reddit.com');
                 const jsonUrl = `${baseUrl}.json`;
                 const discordUA = 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)';
 
