@@ -379,66 +379,72 @@ client.on('interactionCreate', async interaction => {
             }
 
             if (interaction.commandName === 'panel') {
-                const title = interaction.options.getString('title');
-                const description = interaction.options.getString('description');
-                const channel = interaction.options.getChannel('channel') || interaction.channel;
+                const sub = interaction.options.getSubcommand();
+                if (sub === 'create') {
+                    const title = interaction.options.getString('title');
+                    const description = interaction.options.getString('description');
+                    const channel = interaction.options.getChannel('channel') || interaction.channel;
 
-                const categories = ticketDb.getCategories(interaction.guildId);
-                if (categories.length === 0) {
-                    return interaction.reply({ content: 'You must first create at least one category using `/category create`!', ephemeral: true });
-                }
-
-                const embed = new EmbedBuilder()
-                    .setColor('#ff85a2')
-                    .setTitle(title)
-                    .setDescription(description)
-                    .setTimestamp();
-
-                const rows = [];
-                let currentRow = new ActionRowBuilder();
-
-                categories.forEach((cat, i) => {
-                    if (i > 0 && i % 5 === 0) {
-                        rows.push(currentRow);
-                        currentRow = new ActionRowBuilder();
+                    const categories = ticketDb.getCategories(interaction.guildId);
+                    if (categories.length === 0) {
+                        return interaction.reply({ content: 'You must first create at least one category using `/category create`!', ephemeral: true });
                     }
-                    currentRow.addComponents(
-                        new ButtonBuilder()
-                            .setCustomId(`ticket_open_${cat.id}`)
-                            .setLabel(cat.name)
-                            .setEmoji(cat.emoji)
-                            .setStyle(ButtonStyle.Primary)
-                    );
-                });
-                rows.push(currentRow);
 
-                await channel.send({ embeds: [embed], components: rows });
-                return await interaction.reply({ content: `Panel successfully created in ${channel}! ✨`, ephemeral: true });
+                    const embed = new EmbedBuilder()
+                        .setColor('#ff85a2')
+                        .setTitle(title)
+                        .setDescription(description)
+                        .setTimestamp();
+
+                    const rows = [];
+                    let currentRow = new ActionRowBuilder();
+
+                    categories.forEach((cat, i) => {
+                        if (i > 0 && i % 5 === 0) {
+                            rows.push(currentRow);
+                            currentRow = new ActionRowBuilder();
+                        }
+                        currentRow.addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`ticket_open_${cat.id}`)
+                                .setLabel(cat.name)
+                                .setEmoji(cat.emoji)
+                                .setStyle(ButtonStyle.Primary)
+                        );
+                    });
+                    rows.push(currentRow);
+
+                    await channel.send({ embeds: [embed], components: rows });
+                    return await interaction.reply({ content: `Panel successfully created in ${channel}! ✨`, ephemeral: true });
+                }
             }
 
             if (interaction.commandName === 'category') {
-                const name = interaction.options.getString('name');
-                const emoji = interaction.options.getString('emoji');
-                const category = interaction.options.getChannel('category');
-                const role = interaction.options.getRole('support_role');
+                const sub = interaction.options.getSubcommand();
+                if (sub === 'create') {
+                    const name = interaction.options.getString('name');
+                    const emoji = interaction.options.getString('emoji');
+                    const category = interaction.options.getChannel('category');
+                    const role = interaction.options.getRole('support_role');
 
-                const id = Math.random().toString(36).substring(2, 9);
+                    const id = Math.random().toString(36).substring(2, 9);
 
-                ticketDb.createCategory({
-                    id: id,
-                    guildId: interaction.guildId,
-                    name: name,
-                    emoji: emoji,
-                    roles: [role.id],
-                    categoryId: category.id,
-                    maxTickets: 1,
-                    questions: []
-                });
+                    ticketDb.createCategory({
+                        id: id,
+                        guildId: interaction.guildId,
+                        name: name,
+                        emoji: emoji,
+                        roles: [role.id],
+                        categoryId: category.id,
+                        maxTickets: 1,
+                        questions: []
+                    });
 
-                return await interaction.reply({
-                    content: `✅ Created category **${name}** ${emoji}!\nNext step: Run \`/panel create\` to show it to users! ✨`,
-                    ephemeral: true
-                });
+                    return await interaction.reply({
+                        content: `✅ Created category **${name}** ${emoji}!\nNext step: Run \`/panel create\` to show it to users! ✨`,
+                        ephemeral: true
+                    });
+                }
             }
 
             if (interaction.commandName === 'close') {
