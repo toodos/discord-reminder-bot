@@ -643,7 +643,17 @@ client.on('messageCreate', async message => {
 
                 if (isShowing) {
                     await message.react('✅');
-                    await message.reply('✨ This Reddit link is not removed! It looks all good! 🌸');
+                    const reply = await message.reply('✨ This Reddit link is approved! Sending to client now... ⏳ 🌸');
+                    
+                    // Wait 60 seconds and then edit the message
+                    setTimeout(async () => {
+                        try {
+                            await reply.edit('✅ Sent to client! 🌸');
+                        } catch (editError) {
+                            console.error('[LinkCheck] Failed to edit status message:', editError.message);
+                        }
+                    }, 60000);
+
                     console.log(`[LinkCheck] Verified Reddit link as SHOWING`);
                 } else {
                     await message.react('❌');
