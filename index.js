@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, Partials, PermissionFlagsBits, ActivityType, EmbedBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, PermissionFlagsBits, ActivityType, EmbedBuilder, AttachmentBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, UserSelectMenuBuilder, ComponentType } = require('discord.js');
 const ticketDb = require('./utils/ticket-db');
 const ticketLogic = require('./utils/ticket-logic');
 const { ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
@@ -539,7 +539,15 @@ client.on('interactionCreate', async interaction => {
                 case 'ticket_claim':
                     await ticketLogic.claimTicket(interaction);
                     break;
+                case 'ticket_manage_users':
+                    await ticketLogic.manageUsers(interaction);
+                    break;
             }
+        }
+
+        // User Select Menu Interaction
+        if (interaction.isUserSelectMenu() && interaction.customId === 'ticket_user_select') {
+            await ticketLogic.handleUserUpdate(interaction);
         }
     } catch (error) {
         console.error('Error handling interaction:', error);

@@ -113,5 +113,56 @@ module.exports = {
         } catch (e) {}
 
         await interaction.channel.delete();
+    },
+
+    manageUsers: async (interaction) => {
+        const select = new UserSelectMenuBuilder()
+            .setCustomId('ticket_user_select')
+            .setPlaceholder('Select users to add or remove... 🎀')
+            .setMinValues(0)
+            .setMaxValues(10);
+
+        const row = new ActionRowBuilder().addComponents(select);
+
+        await interaction.reply({
+            content: 'Select the users you want to add to this ticket! 🌸\n*(Already added users will stay unless you unselect them)*',
+            components: [row],
+            ephemeral: true
+        });
+    },
+
+    handleUserUpdate: async (interaction) => {
+        const users = interaction.values;
+        const channel = interaction.channel;
+
+        await interaction.deferUpdate();
+
+        // Get current overrides to keep staff and owner
+        const ticket = ticketDb.getTicket(channel.id);
+        
+        // Reset permissions for all users not in the new list (except staff/owner)
+        // We'll just overwrite with the new list + core entities
+        const category = ticketDb.getCategory(ticket.categoryId);
+        const staffRoles = JSON.parse(category.roles || '[]');
+
+        const overwrites = [
+            { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+            { id: ticket.userId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles] },
+            ...staffRoles.map(roleId => ({
+                id: roleId,
+                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles]
+            })),
+            ...users.map(userId => ({
+                id: userId,
+                allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles]
+            }))
+        ];
+
+        await channel.setPermissionOverwrites(overwrites);
+
+        await interaction.followUp({ 
+            content: `✅ Updated ticket access! Updated ${users.length} added user(s). ✨`, 
+            ephemeral: true 
+        });
     }
 };
