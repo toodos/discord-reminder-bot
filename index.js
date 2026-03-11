@@ -521,10 +521,17 @@ client.on('interactionCreate', async interaction => {
         }
     } catch (error) {
         console.error('Error handling interaction:', error);
+        
+        let errorMessage = 'Oh no! Something went a little wobbly while doing that! 🧊💦';
+        // If it's an admin, show a slightly more detailed error for debugging
+        if (interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+            errorMessage += `\n\n**Admin Debug Info:** \`${error.message}\``;
+        }
+
         if (interaction.replied || interaction.deferred) {
-            await interaction.followUp({ content: 'Oh no! Something went a little wobbly while doing that! 🧊💦', ephemeral: true });
+            await interaction.followUp({ content: errorMessage, ephemeral: true }).catch(() => {});
         } else {
-            await interaction.reply({ content: 'Oh no! Something went a little wobbly while doing that! 🧊💦', ephemeral: true });
+            await interaction.reply({ content: errorMessage, ephemeral: true }).catch(() => {});
         }
     }
 });
