@@ -105,7 +105,7 @@ module.exports = {
         const setClause = keys.map(k => `${k} = ?`).join(', ');
         db.prepare(`UPDATE tickets SET ${setClause} WHERE channelId = ?`).run(...Object.values(data), channelId);
     },
-    getUserActiveTickets: (userId, guildId) => db.prepare('SELECT * FROM tickets WHERE userId = ? AND guildId = ? AND status = "open"').all(userId, guildId),
+    getUserActiveTickets: (userId, guildId) => db.prepare("SELECT * FROM tickets WHERE userId = ? AND guildId = ? AND status = 'open'").all(userId, guildId),
     isBlacklisted: (guildId, userId) => !!db.prepare('SELECT 1 FROM blacklist WHERE guildId = ? AND userId = ?').get(guildId, userId),
     addToBlacklist: (guildId, userId) => db.prepare('INSERT OR IGNORE INTO blacklist (guildId, userId) VALUES (?, ?)').run(guildId, userId),
     removeFromBlacklist: (guildId, userId) => db.prepare('DELETE FROM blacklist WHERE guildId = ? AND userId = ?').run(guildId, userId),
