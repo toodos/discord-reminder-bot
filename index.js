@@ -3,7 +3,8 @@ const { Client, GatewayIntentBits, Partials, PermissionFlagsBits, ActivityType, 
 const { parseTime } = require('./utils/timer');
 const {
     getUser, addMoney, removeMoney, setCooldown, getCooldowns,
-    clearCooldown, removeCooldownByUserId, getAllUsers
+    clearCooldown, removeCooldownByUserId, getAllUsers,
+    addReminder, getReminders, removeReminder, removeRemindersByUserId
 } = require('./utils/database');
 
 const client = new Client({
@@ -31,19 +32,35 @@ client.once('ready', () => {
         }
     }
 
+    // Initial check and setup timers for all existing reminders
+    const reminders = getReminders();
+    for (const reminder of reminders) {
+        const remaining = reminder.endTime - now;
+        if (remaining <= 0) {
+            processExpiredReminder(reminder);
+        } else {
+            setTimeout(() => processExpiredReminder(reminder), remaining);
+        }
+    }
+
     // Interval for status updates and safety check
     setInterval(checkCooldowns, 30000);
 });
 
 async function processExpiredCooldown(cd) {
-    // Check if it still exists in DB to prevent double processing
+    // Check if it still exists in DB to prevent double processing or processing after removal
     const currentCooldowns = getCooldowns();
     const stillExists = currentCooldowns.some(c => c.userId === cd.userId && c.endTime === cd.endTime);
     if (!stillExists) return;
 
     try {
-        const user = await client.users.fetch(cd.userId);
-        const channel = await client.channels.fetch(cd.channelId);
+        const user = await client.users.fetch(cd.userId).catch(() => null);
+        const channel = await client.channels.fetch(cd.channelId).catch(() => null);
+        if (!user || !channel) {
+            clearCooldown(cd.userId, cd.endTime);
+            return;
+        }
+
         let initiator;
         if (cd.initiatorId) {
             try {
@@ -79,13 +96,59 @@ async function processExpiredCooldown(cd) {
                 .setTimestamp();
             await channel.send({ content: `${mention}`, embeds: [embed], files: [file] });
         } catch (e) {
-            console.error(`Could not send message to channel ${cd.channelId}`);
+            // console.error(`Could not send message to channel ${cd.channelId}`);
         }
 
         clearCooldown(cd.userId, cd.endTime);
     } catch (error) {
         console.error(`Error processing cooldown for ${cd.userId}:`, error);
         clearCooldown(cd.userId, cd.endTime);
+    }
+}
+
+async function processExpiredReminder(reminder) {
+    // Check if it still exists in DB
+    const currentReminders = getReminders();
+    const stillExists = currentReminders.some(r => r.id === reminder.id);
+    if (!stillExists) return;
+
+    try {
+        const targetUser = await client.users.fetch(reminder.userId).catch(() => null);
+        const targetChannel = await client.channels.fetch(reminder.channelId).catch(() => null);
+        const initiator = await client.users.fetch(reminder.initiatorId).catch(() => null);
+
+        if (!targetUser || !targetChannel) {
+            removeReminder(reminder.id);
+            return;
+        }
+
+        const file = new AttachmentBuilder('./assets/reminder.png');
+        const remindEmbed = new EmbedBuilder()
+            .setColor('#ff85a2')
+            .setTitle('🔔 Ding-dong! Reminder! 🎀')
+            .setThumbnail('attachment://reminder.png')
+            .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\n${reminder.message} ✨\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
+            .setFooter({ text: `Lovingly set by ${initiator ? initiator.tag : 'someone'} 🌸` })
+            .setTimestamp();
+
+        // Send DM
+        try {
+            await targetUser.send({ embeds: [remindEmbed], files: [file] });
+        } catch (error) {
+            // console.error(`Could not send DM to ${targetUser.tag}.`);
+        }
+
+        // Ping in channel
+        try {
+            await targetChannel.send({ content: `${targetUser}`, embeds: [remindEmbed], files: [file] });
+        } catch (error) {
+            // console.error(`Could not send message to channel ${targetChannel.id}.`);
+        }
+
+        removeReminder(reminder.id);
+    } catch (error) {
+        console.error(`Error processing reminder ${reminder.id}:`, error);
+        removeReminder(reminder.id);
     }
 }
 
@@ -116,16 +179,6 @@ client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
     try {
-        // Global Cooldown Block
-        if (interaction.commandName !== 'balance') {
-            const existing = getCooldowns().find(c => c.userId === interaction.user.id);
-            if (existing) {
-                return interaction.reply({
-                    content: `Wait a second! ✨ You're taking a tiny break! You can assign me a new task in **<t:${Math.floor(existing.endTime / 1000)}:R>**. 🎀`,
-                    ephemeral: true
-                });
-            }
-        }
 
         if (interaction.commandName === 'remind') {
             const timeStr = interaction.options.getString('time');
@@ -138,6 +191,10 @@ client.on('interactionCreate', async interaction => {
             if (!durationMs) {
                 return interaction.reply({ content: 'Oh no! I couldn\'t understand that time format. Please use something like "10m" or "2h"! 🌸', ephemeral: true });
             }
+
+            const endTime = Date.now() + durationMs;
+            const reminderId = addReminder(targetUser.id, targetChannel.id, message, endTime, interaction.user.id);
+            const reminderData = { id: reminderId, userId: targetUser.id, channelId: targetChannel.id, message, endTime, initiatorId: interaction.user.id };
 
             const file = new AttachmentBuilder('./assets/reminder.png');
             const embed = new EmbedBuilder()
@@ -153,30 +210,7 @@ client.on('interactionCreate', async interaction => {
 
             await interaction.reply({ embeds: [embed], files: [file], ephemeral: true });
 
-            setTimeout(async () => {
-                const file = new AttachmentBuilder('./assets/reminder.png');
-                const remindEmbed = new EmbedBuilder()
-                    .setColor('#ff85a2')
-                    .setTitle('🔔 Ding-dong! Reminder! 🎀')
-                    .setThumbnail('attachment://reminder.png')
-                    .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\n${message} ✨\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
-                    .setFooter({ text: `Lovingly set by ${interaction.user.tag} 🌸` })
-                    .setTimestamp();
-
-                // Send DM
-                try {
-                    await targetUser.send({ embeds: [remindEmbed], files: [file] });
-                } catch (error) {
-                    console.error(`Could not send DM to ${targetUser.tag}.`);
-                }
-
-                // Ping in channel
-                try {
-                    await targetChannel.send({ content: `${targetUser}`, embeds: [remindEmbed], files: [file] });
-                } catch (error) {
-                    console.error(`Could not send message to channel ${targetChannel.id}.`);
-                }
-            }, durationMs);
+            setTimeout(() => processExpiredReminder(reminderData), durationMs);
         } else if (interaction.commandName === 'add_money') {
             const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
             if (!isAdmin) {
@@ -313,8 +347,17 @@ client.on('interactionCreate', async interaction => {
 
             const targetUser = interaction.options.getUser('user');
             removeCooldownByUserId(targetUser.id);
+            removeRemindersByUserId(targetUser.id);
 
-            await interaction.reply({ content: `Yay! Successfully removed cooldowns for ${targetUser.tag}! ✨🌸` });
+            const file = new AttachmentBuilder('./assets/cooldown.png');
+            const embed = new EmbedBuilder()
+                .setColor('#ff85a2')
+                .setTitle('☀️ Nap Time Over! ✨')
+                .setThumbnail('attachment://cooldown.png')
+                .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nYay! Successfully removed cooldowns and reminders for ${targetUser}! \nThey are now wide awake and ready for tasks! ✨🌸\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
+                .setTimestamp();
+
+            await interaction.reply({ embeds: [embed], files: [file] });
         }
     } catch (error) {
         console.error('Error handling interaction:', error);

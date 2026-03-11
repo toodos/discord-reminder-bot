@@ -17,6 +17,7 @@ if (!fs.existsSync(DB_PATH)) {
 function getData() {
     const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
     if (!data.cooldowns) data.cooldowns = [];
+    if (!data.reminders) data.reminders = [];
     return data;
 }
 
@@ -75,4 +76,32 @@ function getAllUsers() {
     return getData().users;
 }
 
-module.exports = { getUser, addMoney, removeMoney, setCooldown, getCooldowns, clearCooldown, removeCooldownByUserId, getAllUsers };
+function addReminder(userId, channelId, message, endTime, initiatorId) {
+    const data = getData();
+    const reminderId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
+    data.reminders.push({ id: reminderId, userId, channelId, message, endTime, initiatorId });
+    saveData(data);
+    return reminderId;
+}
+
+function getReminders() {
+    return getData().reminders;
+}
+
+function removeReminder(reminderId) {
+    const data = getData();
+    data.reminders = data.reminders.filter(r => r.id !== reminderId);
+    saveData(data);
+}
+
+function removeRemindersByUserId(userId) {
+    const data = getData();
+    data.reminders = data.reminders.filter(r => r.userId !== userId);
+    saveData(data);
+}
+
+module.exports = {
+    getUser, addMoney, removeMoney, setCooldown, getCooldowns,
+    clearCooldown, removeCooldownByUserId, getAllUsers,
+    addReminder, getReminders, removeReminder, removeRemindersByUserId
+};
