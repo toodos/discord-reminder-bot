@@ -591,69 +591,75 @@ client.on('messageCreate', async message => {
     if (urlMatch) {
         const url = urlMatch[0];
         
-        // Reddit Comment Verification logic
-        // Updated regex to handle ALL Reddit variants (www, sh, re, old, etc.)
-        const redditCommentRegex = /(?:[a-z0-9-]+\.)?(?:reddit\.com|redd\.it)\/(?:r\/[^\/]+\/)?comments\/[^\/]+(?:\/[^\/]+\/([a-z0-9]+))?/i;
+        // Robust regex to handle ALL Reddit variants (www, sh, re, old, comments, /s/ links, etc.)
+        const redditCommentRegex = /(?:[a-z0-9-]+\.)?(?:reddit\.com|redd\.it)\/(?:r\/[^\/]+\/)?(?:comments\/[^\/]+(?:\/[^\/]+\/([a-z0-9]+))?|s\/[a-z0-9]+)/i;
         const redditMatch = url.match(redditCommentRegex);
 
         if (redditMatch) {
             try {
-                // Force any reddit subdomain to old.reddit.com for reliable JSON
-                const baseUrl = url.split('?')[0].replace(/\/$/, '').replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://old.reddit.com');
-                const jsonUrl = `${baseUrl}.json`;
+                const commentId = redditMatch[1];
+                const isShareLink = url.includes('/s/');
                 const discordUA = 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)';
-
-                console.log(`[LinkCheck] Verifying Reddit link via JSON: ${jsonUrl}`);
-
-                const response = await fetch(jsonUrl, {
-                    headers: { 'User-Agent': discordUA },
-                    signal: AbortSignal.timeout(5000)
-                });
-
-                if (!response.ok) {
-                    console.log(`[LinkCheck] Reddit JSON Error: ${response.status} for ${jsonUrl}`);
-                    if (response.status === 404) {
-                        await message.react('❌');
-                    } else {
-                        await message.react('❓');
-                    }
-                    return;
-                }
-
-                const data = await response.json();
-                
-                // For a specific comment link, data[1].data.children should contain the comment.
-                // If it's empty, the comment is likely removed or gone.
                 let isShowing = false;
-                
-                if (Array.isArray(data) && data[1] && data[1].data && data[1].data.children && data[1].data.children.length > 0) {
-                    const comment = data[1].data.children[0].data;
-                    // Check removal markers
-                    isShowing = comment.author !== '[deleted]' && 
-                                comment.body !== '[removed]' && 
-                                comment.body !== '[deleted]' &&
-                                !comment.removed_by_category;
+
+                if (isShareLink) {
+                    // For /s/ links, use OEmbed as it resolves correctly
+                    console.log(`[LinkCheck] Verifying Reddit Share Link via OEmbed: ${url}`);
+                    const oembedUrl = `https://www.reddit.com/oembed?url=${encodeURIComponent(url)}`;
+                    const response = await fetch(oembedUrl, { headers: { 'User-Agent': discordUA }, signal: AbortSignal.timeout(5000) });
                     
-                    console.log(`[LinkCheck] Comment status - Author: ${comment.author}, Showing: ${isShowing}`);
-                } else if (!Array.isArray(data) || !data[1] || !data[1].data || data[1].data.children.length === 0) {
-                    // Empty children list on a comment permalink almost always means it's removed
-                    console.log(`[LinkCheck] No comment found in JSON children (likely removed)`);
-                    isShowing = false;
+                    if (response.ok) {
+                        const data = await response.json();
+                        isShowing = data && data.author_name && data.author_name !== '[deleted]';
+                    } else {
+                        isShowing = false; // Blocked or 404
+                    }
+                } else {
+                    // For standard links, use old.reddit.com JSON for high accuracy
+                    const baseUrl = url.split('?')[0].replace(/\/$/, '').replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://old.reddit.com');
+                    const jsonUrl = `${baseUrl}.json`;
+                    console.log(`[LinkCheck] Verifying Reddit link via JSON: ${jsonUrl}`);
+
+                    const response = await fetch(jsonUrl, { headers: { 'User-Agent': discordUA }, signal: AbortSignal.timeout(5000) });
+                    
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            await message.react('❌');
+                            await message.reply('🎀 Oh no! This link has been automatically removed by Automod... 🌸');
+                        } else {
+                            await message.react('❓');
+                        }
+                        return;
+                    }
+
+                    const data = await response.json();
+                    
+                    if (commentId && Array.isArray(data) && data[1] && data[1].data.children.length > 0) {
+                        // It's a comment link
+                        const comment = data[1].data.children[0].data;
+                        isShowing = comment.author !== '[deleted]' && 
+                                    comment.body !== '[removed]' && 
+                                    comment.body !== '[deleted]' &&
+                                    !comment.removed_by_category;
+                    } else if (!commentId && Array.isArray(data) && data[0] && data[0].data.children.length > 0) {
+                        // It's a post link
+                        const post = data[0].data.children[0].data;
+                        isShowing = post.author !== '[deleted]' && 
+                                    post.selftext !== '[removed]' && 
+                                    post.selftext !== '[deleted]' &&
+                                    !post.removed_by_category;
+                    } else {
+                        isShowing = false; // No data found
+                    }
                 }
 
                 if (isShowing) {
                     await message.react('✅');
                     const reply = await message.reply('✨ This Reddit link is approved! Sending to client now... ⏳ 🌸');
                     
-                    // Wait 60 seconds and then edit the message
                     setTimeout(async () => {
-                        try {
-                            await reply.edit('✅ Sent to client! 🌸');
-                        } catch (editError) {
-                            console.error('[LinkCheck] Failed to edit status message:', editError.message);
-                        }
+                        try { await reply.edit('✅ Sent to client! 🌸'); } catch (e) {}
                     }, 60000);
-
                     console.log(`[LinkCheck] Verified Reddit link as SHOWING`);
                 } else {
                     await message.react('❌');
