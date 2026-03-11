@@ -6,7 +6,6 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 
-// Path relative to root of the bot
 const dbPath = path.join(__dirname, '../tickets.db');
 const db = new Database(dbPath);
 
