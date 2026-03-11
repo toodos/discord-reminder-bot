@@ -13,6 +13,11 @@ module.exports = {
         const count = ticketDb.incrementTicketCount(interaction.guildId);
         const paddedCount = count.toString().padStart(4, '0');
 
+        // Check if the bot has permission to manage channels
+        if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageChannels)) {
+            throw new Error("I don't have the 'Manage Channels' permission to create a ticket! 🎀");
+        }
+
         const channel = await interaction.guild.channels.create({
             name: `ticket-${paddedCount}`,
             type: ChannelType.GuildText,
@@ -25,6 +30,9 @@ module.exports = {
                     allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.AttachFiles]
                 }))
             ]
+        }).catch(err => {
+            if (err.code === 50035) throw new Error("Invalid Category ID. Please recreate the ticket category with a valid Discord Category! 🌷");
+            throw err;
         });
 
         ticketDb.createTicket({
