@@ -177,190 +177,190 @@ async function checkCooldowns() {
 client.on('interactionCreate', async interaction => {
     try {
 
-        if (interaction.commandName === 'remind') {
-            const timeStr = interaction.options.getString('time');
-            const message = interaction.options.getString('message');
-            const targetChannel = interaction.options.getChannel('channel') || interaction.channel;
-            const targetUser = interaction.options.getUser('user') || interaction.user;
+        if (interaction.isChatInputCommand()) {
+            if (interaction.commandName === 'remind') {
+                const timeStr = interaction.options.getString('time');
+                const message = interaction.options.getString('message');
+                const targetChannel = interaction.options.getChannel('channel') || interaction.channel;
+                const targetUser = interaction.options.getUser('user') || interaction.user;
 
-            const durationMs = parseTime(timeStr);
+                const durationMs = parseTime(timeStr);
 
-            if (!durationMs) {
-                return interaction.reply({ content: 'Oh no! I couldn\'t understand that time format. Please use something like "10m" or "2h"! 🌸', ephemeral: true });
-            }
+                if (!durationMs) {
+                    return interaction.reply({ content: 'Oh no! I couldn\'t understand that time format. Please use something like "10m" or "2h"! 🌸', ephemeral: true });
+                }
 
-            const endTime = Date.now() + durationMs;
-            const reminderId = addReminder(targetUser.id, targetChannel.id, message, endTime, interaction.user.id);
-            const reminderData = { id: reminderId, userId: targetUser.id, channelId: targetChannel.id, message, endTime, initiatorId: interaction.user.id };
+                const endTime = Date.now() + durationMs;
+                const reminderId = addReminder(targetUser.id, targetChannel.id, message, endTime, interaction.user.id);
+                const reminderData = { id: reminderId, userId: targetUser.id, channelId: targetChannel.id, message, endTime, initiatorId: interaction.user.id };
 
-            const file = new AttachmentBuilder('./assets/reminder.png');
-            const embed = new EmbedBuilder()
-                .setColor('#ff85a2')
-                .setTitle('⏰ Reminder Set! ✨')
-                .setThumbnail('attachment://reminder.png')
-                .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nI'll make sure to remind ${targetUser} about: \n> ${message} 🎀\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
-                .addFields(
-                    { name: '✨ Time', value: `\`${timeStr}\``, inline: true },
-                    { name: '🌷 Channel', value: `${targetChannel}`, inline: true }
-                )
-                .setTimestamp();
+                const file = new AttachmentBuilder('./assets/reminder.png');
+                const embed = new EmbedBuilder()
+                    .setColor('#ff85a2')
+                    .setTitle('⏰ Reminder Set! ✨')
+                    .setThumbnail('attachment://reminder.png')
+                    .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nI'll make sure to remind ${targetUser} about: \n> ${message} 🎀\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
+                    .addFields(
+                        { name: '✨ Time', value: `\`${timeStr}\``, inline: true },
+                        { name: '🌷 Channel', value: `${targetChannel}`, inline: true }
+                    )
+                    .setTimestamp();
 
-            await interaction.reply({ embeds: [embed], files: [file], ephemeral: true });
+                await interaction.reply({ embeds: [embed], files: [file], ephemeral: true });
 
-            setTimeout(() => processExpiredReminder(reminderData), durationMs);
-        } else if (interaction.commandName === 'add_money') {
-            const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
-            if (!isAdmin) {
-                return interaction.reply({ content: 'Oopsie! Only big-boss Administrators can use this command! 🎀', ephemeral: true });
-            }
+                setTimeout(() => processExpiredReminder(reminderData), durationMs);
+            } else if (interaction.commandName === 'add_money') {
+                const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
+                if (!isAdmin) {
+                    return interaction.reply({ content: 'Oopsie! Only big-boss Administrators can use this command! 🎀', ephemeral: true });
+                }
 
-            const targetUser = interaction.options.getUser('user');
-            const amount = interaction.options.getNumber('amount');
+                const targetUser = interaction.options.getUser('user');
+                const amount = interaction.options.getNumber('amount');
 
-            if (amount < 0) {
-                return interaction.reply({ content: 'You can\'t add a negative amount of money, silly! 🍭', ephemeral: true });
-            }
+                if (amount < 0) {
+                    return interaction.reply({ content: 'You can\'t add a negative amount of money, silly! 🍭', ephemeral: true });
+                }
 
-            const newBalance = addMoney(targetUser.id, amount);
-            const file = new AttachmentBuilder('./assets/money.png');
-            const embed = new EmbedBuilder()
-                .setColor('#ffc8dd')
-                .setTitle('💰 Yay! Money Added! ✨')
-                .setThumbnail('attachment://money.png')
-                .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nSuccessfully added **₹${amount}** to ${targetUser}'s sparkly balance! 🍬\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
-                .addFields({ name: '✨ New Balance', value: `**₹${newBalance}**` });
+                const newBalance = addMoney(targetUser.id, amount);
+                const file = new AttachmentBuilder('./assets/money.png');
+                const embed = new EmbedBuilder()
+                    .setColor('#ffc8dd')
+                    .setTitle('💰 Yay! Money Added! ✨')
+                    .setThumbnail('attachment://money.png')
+                    .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nSuccessfully added **₹${amount}** to ${targetUser}'s sparkly balance! 🍬\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
+                    .addFields({ name: '✨ New Balance', value: `**₹${newBalance}**` });
 
-            await interaction.reply({ embeds: [embed], files: [file] });
+                await interaction.reply({ embeds: [embed], files: [file] });
 
-        } else if (interaction.commandName === 'balance') {
-            const targetUser = interaction.options.getUser('user') || interaction.user;
-            const userData = getUser(targetUser.id);
-            const allUsersData = getAllUsers();
+            } else if (interaction.commandName === 'balance') {
+                const targetUser = interaction.options.getUser('user') || interaction.user;
+                const userData = getUser(targetUser.id);
+                const allUsersData = getAllUsers();
 
-            const sortedUsers = Object.entries(allUsersData)
-                .map(([userId, data]) => ({ userId, balance: data.balance }))
-                .sort((a, b) => b.balance - a.balance);
+                const sortedUsers = Object.entries(allUsersData)
+                    .map(([userId, data]) => ({ userId, balance: data.balance }))
+                    .sort((a, b) => b.balance - a.balance);
 
-            const leaderboard = sortedUsers.slice(0, 3);
-            const userRank = sortedUsers.findIndex(u => u.userId === targetUser.id) + 1;
+                const leaderboard = sortedUsers.slice(0, 3);
+                const userRank = sortedUsers.findIndex(u => u.userId === targetUser.id) + 1;
 
-            const trophies = ['🥇', '🥈', '🥉'];
-            let leaderboardStr = "";
-            leaderboard.forEach((entry, index) => {
-                leaderboardStr += `${trophies[index]} <@${entry.userId}>: **₹${entry.balance}**\n`;
-            });
-
-            if (userRank > 3) {
-                leaderboardStr += `\n...You are at **#${userRank}**`;
-            }
-
-            const file = new AttachmentBuilder('./assets/balance.png');
-            const embed = new EmbedBuilder()
-                .setColor('#ffb7ff')
-                .setAuthor({
-                    name: `${targetUser.username}'s Sparkly Vault 💎`,
-                    iconURL: targetUser.displayAvatarURL({ dynamic: true })
-                })
-                .setThumbnail('attachment://balance.png')
-                .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nChecking the vault floors... 🩰✨\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
-                .addFields(
-                    { name: '💰 Current Wealth', value: `\`₹${userData.balance.toLocaleString()}\` 🌸`, inline: true },
-                    { name: '📊 Global Rank', value: `\`#${userRank}\` ✨`, inline: true },
-                    { name: '\u200B', value: '\u200B', inline: false }, // Spacer
-                    { name: '🏆 Top Ballers (Global) 🍭', value: leaderboardStr || "*No records found yet!*", inline: false }
-                )
-                .setFooter({ text: 'Economy System Cute v2.0 🎀', iconURL: client.user.displayAvatarURL() })
-                .setTimestamp();
-
-            await interaction.reply({ embeds: [embed], files: [file] });
-        } else if (interaction.commandName === 'remove_money') {
-            const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
-            if (!isAdmin) {
-                return interaction.reply({ content: 'Oopsie! Only big-boss Administrators can do that! 🎀', ephemeral: true });
-            }
-
-            const targetUser = interaction.options.getUser('user');
-            const amount = interaction.options.getNumber('amount');
-
-            if (amount < 0) {
-                return interaction.reply({ content: 'You can\'t remove a negative amount! That\'s just silly. 🍭', ephemeral: true });
-            }
-
-            const newBalance = removeMoney(targetUser.id, amount);
-            const file = new AttachmentBuilder('./assets/money.png');
-            const embed = new EmbedBuilder()
-                .setColor('#c3aed6')
-                .setTitle('💸 Balance Deducted 🌷')
-                .setThumbnail('attachment://money.png')
-                .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nRemoved **₹${amount}** from ${targetUser}'s account. 🍬\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
-                .addFields({ name: '✨ Remaining Balance', value: `**₹${newBalance}**` });
-
-            await interaction.reply({ embeds: [embed], files: [file] });
-        } else if (interaction.commandName === 'cd') {
-            const targetUser = interaction.options.getUser('user');
-            const timeStr = interaction.options.getString('time') || '24h';
-
-            const existing = getCooldowns().find(c => c.userId === targetUser.id);
-            if (existing) {
-                return interaction.reply({
-                    content: `Wait a sec! ✨ ${targetUser.tag} is already having a cozy nap! It expires **<t:${Math.floor(existing.endTime / 1000)}:R>**. 🌙`,
-                    ephemeral: true
+                const trophies = ['🥇', '🥈', '🥉'];
+                let leaderboardStr = "";
+                leaderboard.forEach((entry, index) => {
+                    leaderboardStr += `${trophies[index]} <@${entry.userId}>: **₹${entry.balance}**\n`;
                 });
+
+                if (userRank > 3) {
+                    leaderboardStr += `\n...You are at **#${userRank}**`;
+                }
+
+                const file = new AttachmentBuilder('./assets/balance.png');
+                const embed = new EmbedBuilder()
+                    .setColor('#ffb7ff')
+                    .setAuthor({
+                        name: `${targetUser.username}'s Sparkly Vault 💎`,
+                        iconURL: targetUser.displayAvatarURL({ dynamic: true })
+                    })
+                    .setThumbnail('attachment://balance.png')
+                    .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nChecking the vault floors... 🩰✨\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
+                    .addFields(
+                        { name: '💰 Current Wealth', value: `\`₹${userData.balance.toLocaleString()}\` 🌸`, inline: true },
+                        { name: '📊 Global Rank', value: `\`#${userRank}\` ✨`, inline: true },
+                        { name: '\u200B', value: '\u200B', inline: false }, // Spacer
+                        { name: '🏆 Top Ballers (Global) 🍭', value: leaderboardStr || "*No records found yet!*", inline: false }
+                    )
+                    .setFooter({ text: 'Economy System Cute v2.0 🎀', iconURL: client.user.displayAvatarURL() })
+                    .setTimestamp();
+
+                await interaction.reply({ embeds: [embed], files: [file] });
+            } else if (interaction.commandName === 'remove_money') {
+                const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
+                if (!isAdmin) {
+                    return interaction.reply({ content: 'Oopsie! Only big-boss Administrators can do that! 🎀', ephemeral: true });
+                }
+
+                const targetUser = interaction.options.getUser('user');
+                const amount = interaction.options.getNumber('amount');
+
+                if (amount < 0) {
+                    return interaction.reply({ content: 'You can\'t remove a negative amount! That\'s just silly. 🍭', ephemeral: true });
+                }
+
+                const newBalance = removeMoney(targetUser.id, amount);
+                const file = new AttachmentBuilder('./assets/money.png');
+                const embed = new EmbedBuilder()
+                    .setColor('#c3aed6')
+                    .setTitle('💸 Balance Deducted 🌷')
+                    .setThumbnail('attachment://money.png')
+                    .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nRemoved **₹${amount}** from ${targetUser}'s account. 🍬\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
+                    .addFields({ name: '✨ Remaining Balance', value: `**₹${newBalance}**` });
+
+                await interaction.reply({ embeds: [embed], files: [file] });
+            } else if (interaction.commandName === 'cd') {
+                const targetUser = interaction.options.getUser('user');
+                const timeStr = interaction.options.getString('time') || '24h';
+
+                const existing = getCooldowns().find(c => c.userId === targetUser.id);
+                if (existing) {
+                    return interaction.reply({
+                        content: `Wait a sec! ✨ ${targetUser.tag} is already having a cozy nap! It expires **<t:${Math.floor(existing.endTime / 1000)}:R>**. 🌙`,
+                        ephemeral: true
+                    });
+                }
+
+                const duration = parseTime(timeStr);
+                if (!duration) {
+                    return interaction.reply({ content: 'Oh no! I didn\'t understand that time format. Try "24h" or "1d"! 🌸', ephemeral: true });
+                }
+
+                const endTime = Date.now() + duration;
+                const cooldownData = { userId: targetUser.id, channelId: interaction.channelId, endTime, initiatorId: interaction.user.id };
+
+                setCooldown(targetUser.id, interaction.channelId, endTime, interaction.user.id);
+                setTimeout(() => processExpiredCooldown(cooldownData), duration);
+
+                const file = new AttachmentBuilder('./assets/cooldown.png');
+                const embed = new EmbedBuilder()
+                    .setColor('#ff85a2')
+                    .setTitle('🌸 Chill Time! ✨')
+                    .setAuthor({ name: 'Cooldown Corner 🎀', iconURL: 'https://cdn-icons-png.flaticon.com/512/3468/3468411.png' })
+                    .setThumbnail('attachment://cooldown.png')
+                    .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nThe following user is taking a li'l nap. You can receive next task after the cool down ends!\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
+                    .addFields(
+                        { name: '✨ Resty Person', value: `${targetUser}`, inline: true },
+                        { name: '⏳ Wait Time', value: `\`${timeStr}\``, inline: true },
+                        { name: '🌙 Alarm Set For', value: `<t:${Math.floor(endTime / 1000)}:f> (<t:${Math.floor(endTime / 1000)}:R>)`, inline: false },
+                        { name: '🍭 Started By', value: `${interaction.user}`, inline: true }
+                    )
+                    .setFooter({ text: 'Status: Counting down the sleepy time...' })
+                    .setTimestamp();
+
+                await interaction.reply({ embeds: [embed], files: [file] });
+            } else if (interaction.commandName === 'remove_cd') {
+                const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
+                if (!isAdmin) {
+                    return interaction.reply({ content: 'Oopsie! Only big-boss Administrators can do that! 🎀', ephemeral: true });
+                }
+
+                const targetUser = interaction.options.getUser('user');
+                removeCooldownByUserId(targetUser.id);
+                removeRemindersByUserId(targetUser.id);
+
+                const file = new AttachmentBuilder('./assets/cooldown.png');
+                const embed = new EmbedBuilder()
+                    .setColor('#ff85a2')
+                    .setTitle('☀️ Nap Time Over! ✨')
+                    .setThumbnail('attachment://cooldown.png')
+                    .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nYay! Successfully removed cooldowns and reminders for ${targetUser}! \nThey are now wide awake and ready for tasks! ✨🌸\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
+                    .setTimestamp();
+
+                await interaction.reply({ embeds: [embed], files: [file] });
             }
-
-            const duration = parseTime(timeStr);
-            if (!duration) {
-                return interaction.reply({ content: 'Oh no! I didn\'t understand that time format. Try "24h" or "1d"! 🌸', ephemeral: true });
-            }
-
-            const endTime = Date.now() + duration;
-            const cooldownData = { userId: targetUser.id, channelId: interaction.channelId, endTime, initiatorId: interaction.user.id };
-
-            setCooldown(targetUser.id, interaction.channelId, endTime, interaction.user.id);
-            setTimeout(() => processExpiredCooldown(cooldownData), duration);
-
-            const file = new AttachmentBuilder('./assets/cooldown.png');
-            const embed = new EmbedBuilder()
-                .setColor('#ff85a2')
-                .setTitle('🌸 Chill Time! ✨')
-                .setAuthor({ name: 'Cooldown Corner 🎀', iconURL: 'https://cdn-icons-png.flaticon.com/512/3468/3468411.png' })
-                .setThumbnail('attachment://cooldown.png')
-                .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nThe following user is taking a li'l nap. You can receive next task after the cool down ends!\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
-                .addFields(
-                    { name: '✨ Resty Person', value: `${targetUser}`, inline: true },
-                    { name: '⏳ Wait Time', value: `\`${timeStr}\``, inline: true },
-                    { name: '🌙 Alarm Set For', value: `<t:${Math.floor(endTime / 1000)}:f> (<t:${Math.floor(endTime / 1000)}:R>)`, inline: false },
-                    { name: '🍭 Started By', value: `${interaction.user}`, inline: true }
-                )
-                .setFooter({ text: 'Status: Counting down the sleepy time...' })
-                .setTimestamp();
-
-            await interaction.reply({ embeds: [embed], files: [file] });
-        } else if (interaction.commandName === 'remove_cd') {
-            const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
-            if (!isAdmin) {
-                return interaction.reply({ content: 'Oopsie! Only big-boss Administrators can do that! 🎀', ephemeral: true });
-            }
-
-            const targetUser = interaction.options.getUser('user');
-            removeCooldownByUserId(targetUser.id);
-            removeRemindersByUserId(targetUser.id);
-
-            const file = new AttachmentBuilder('./assets/cooldown.png');
-            const embed = new EmbedBuilder()
-                .setColor('#ff85a2')
-                .setTitle('☀️ Nap Time Over! ✨')
-                .setThumbnail('attachment://cooldown.png')
-                .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\nYay! Successfully removed cooldowns and reminders for ${targetUser}! \nThey are now wide awake and ready for tasks! ✨🌸\n\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
-                .setTimestamp();
-
-            await interaction.reply({ embeds: [embed], files: [file] });
-        }
 
         // --- Ticket System Integration ---
         
         // Slash Commands for Tickets
-        if (interaction.isChatInputCommand()) {
             if (interaction.commandName === 'setup') {
                 const adminRole = interaction.options.getRole('admin_role');
                 const logChannel = interaction.options.getChannel('log_channel');
@@ -372,13 +372,11 @@ client.on('interactionCreate', async interaction => {
                     transcriptChannelId: transcriptChannel.id
                 });
 
-                return await interaction.reply({
+                await interaction.reply({
                     content: `✅ **Ticket System Configured!**\n\n- **Admin Role:** ${adminRole}\n- **Logs:** ${logChannel}\n- **Transcripts:** ${transcriptChannel}\n\nNow use \`/category create\` to define your departments! ✨`,
                     ephemeral: true
                 });
-            }
-
-            if (interaction.commandName === 'panel') {
+            } else if (interaction.commandName === 'panel') {
                 const sub = interaction.options.getSubcommand();
                 if (sub === 'create') {
                     const title = interaction.options.getString('title');
@@ -415,11 +413,9 @@ client.on('interactionCreate', async interaction => {
                     rows.push(currentRow);
 
                     await channel.send({ embeds: [embed], components: rows });
-                    return await interaction.reply({ content: `Panel successfully created in ${channel}! ✨`, ephemeral: true });
+                    await interaction.reply({ content: `Panel successfully created in ${channel}! ✨`, ephemeral: true });
                 }
-            }
-
-            if (interaction.commandName === 'category') {
+            } else if (interaction.commandName === 'category') {
                 const sub = interaction.options.getSubcommand();
                 if (sub === 'create') {
                     const name = interaction.options.getString('name');
@@ -440,7 +436,7 @@ client.on('interactionCreate', async interaction => {
                         questions: []
                     });
 
-                    return await interaction.reply({
+                    await interaction.reply({
                         content: `✅ Created category **${name}** ${emoji}!\nNext step: Run \`/panel create\` to show it to users! ✨`,
                         ephemeral: true
                     });
@@ -456,7 +452,7 @@ client.on('interactionCreate', async interaction => {
                         .setDescription(categories.map(c => `**${c.name}** ${c.emoji} — ID: \`${c.id}\``).join('\n'))
                         .setTimestamp();
 
-                    return interaction.reply({ embeds: [embed], ephemeral: true });
+                    await interaction.reply({ embeds: [embed], ephemeral: true });
                 } else if (sub === 'delete') {
                     const id = interaction.options.getString('id');
                     const category = ticketDb.getCategory(id);
@@ -465,12 +461,10 @@ client.on('interactionCreate', async interaction => {
                     }
 
                     ticketDb.deleteCategory(id);
-                    return interaction.reply({ content: `✅ Successfully deleted the **${category.name}** category! 🗑️✨`, ephemeral: true });
+                    await interaction.reply({ content: `✅ Successfully deleted the **${category.name}** category! 🗑️✨`, ephemeral: true });
                 }
-            }
-
-            if (interaction.commandName === 'close') {
-                return await ticketLogic.closeTicket(interaction);
+            } else if (interaction.commandName === 'close') {
+                await ticketLogic.closeTicket(interaction);
             }
         }
 
