@@ -158,7 +158,7 @@ module.exports = {
             }))
         ];
 
-        await channel.setPermissionOverwrites(overwrites);
+        await channel.permissionOverwrites.set(overwrites);
 
         await interaction.followUp({ 
             content: `✅ Updated ticket access! Updated ${users.length} added user(s). ✨`, 
