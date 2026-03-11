@@ -18,7 +18,10 @@ const client = new Client({
 
 client.once('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
-    client.user.setActivity('Baking strawberry cupcakes 🍓🧁', { type: ActivityType.Custom });
+    client.user.setPresence({
+        activities: [{ name: 'Baking strawberry cupcakes 🍓🧁', type: ActivityType.Custom }],
+        status: 'dnd',
+    });
 
     // Initial check and setup timers for all existing cooldowns
     const cooldowns = getCooldowns();
@@ -157,21 +160,14 @@ async function checkCooldowns() {
     const cooldowns = getCooldowns();
 
     if (cooldowns.length > 0) {
-        // Find the soonest expiration to show in status
+        // Find the soonest expiration to process if missed
         const soonest = cooldowns.reduce((prev, curr) => (prev.endTime < curr.endTime) ? prev : curr);
         const remainingMs = soonest.endTime - now;
 
-        if (remainingMs > 0) {
-            const hours = Math.floor(remainingMs / (1000 * 60 * 60));
-            const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
-            client.user.setActivity(`Counting down: ${hours}h ${minutes}m left... ⏳🍭`, { type: ActivityType.Custom });
-        } else {
-            client.user.setActivity('Baking strawberry cupcakes 🍓🧁', { type: ActivityType.Custom });
+        if (remainingMs <= 0) {
             // Process any that missed their timer
             processExpiredCooldown(soonest);
         }
-    } else {
-        client.user.setActivity('Baking strawberry cupcakes 🍓🧁', { type: ActivityType.Custom });
     }
 }
 
