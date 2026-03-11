@@ -15,10 +15,15 @@ if (!fs.existsSync(DB_PATH)) {
 }
 
 function getData() {
-    const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
-    if (!data.cooldowns) data.cooldowns = [];
-    if (!data.reminders) data.reminders = [];
-    return data;
+    try {
+        const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+        if (!data.users) data.users = {};
+        if (!data.cooldowns) data.cooldowns = [];
+        if (!data.reminders) data.reminders = [];
+        return data;
+    } catch (e) {
+        return { users: {}, cooldowns: [], reminders: [] };
+    }
 }
 
 function saveData(data) {

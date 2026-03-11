@@ -190,10 +190,19 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
     try {
         console.log('Started refreshing application (/) commands.');
 
-        await rest.put(
-            Routes.applicationCommands(process.env.CLIENT_ID),
-            { body: commands },
-        );
+        if (process.env.GUILD_ID) {
+            console.log(`Deploying commands to Guild: ${process.env.GUILD_ID} ✨`);
+            await rest.put(
+                Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
+                { body: commands },
+            );
+        } else {
+            console.log('Deploying commands Globally (can take up to 1 hour) 🌸');
+            await rest.put(
+                Routes.applicationCommands(process.env.CLIENT_ID),
+                { body: commands },
+            );
+        }
 
         console.log('Successfully reloaded application (/) commands.');
     } catch (error) {
