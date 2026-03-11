@@ -597,60 +597,66 @@ client.on('messageCreate', async message => {
 
         if (redditMatch) {
             try {
-                const commentId = redditMatch[1];
-                const isShareLink = url.includes('/s/');
                 const discordUA = 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)';
+                let verificationUrl = url.split('?')[0].replace(/\/$/, '');
+
+                // Step 1: If it's a share link, resolve it first
+                if (url.includes('/s/')) {
+                    console.log(`[LinkCheck] Resolving Reddit Share Link: ${url}`);
+                    try {
+                        const resolveRes = await fetch(url, { 
+                            headers: { 'User-Agent': discordUA },
+                            redirect: 'follow', // Follow redirects to get the final URL
+                            signal: AbortSignal.timeout(5000)
+                        });
+                        if (resolveRes.ok) {
+                            verificationUrl = resolveRes.url.split('?')[0].replace(/\/$/, '');
+                            console.log(`[LinkCheck] Resolved to: ${verificationUrl}`);
+                        }
+                    } catch (resolveErr) {
+                        console.error('[LinkCheck] Share Resolve Error:', resolveErr.message);
+                        // Continue with original URL if resolution fails, but it might fail later
+                    }
+                }
+
+                // Step 2: Convert to old.reddit.com JSON URL
+                const jsonUrl = verificationUrl.replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://old.reddit.com') + '.json';
+                console.log(`[LinkCheck] Verifying via JSON: ${jsonUrl}`);
+
+                const response = await fetch(jsonUrl, { 
+                    headers: { 'User-Agent': discordUA }, 
+                    signal: AbortSignal.timeout(5000) 
+                });
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        await message.react('❌');
+                        await message.reply('🎀 Oh no! This link has been automatically removed by Automod... 🌸');
+                    } else {
+                        await message.react('❓');
+                    }
+                    return;
+                }
+
+                const data = await response.json();
                 let isShowing = false;
 
-                if (isShareLink) {
-                    // For /s/ links, use OEmbed as it resolves correctly
-                    console.log(`[LinkCheck] Verifying Reddit Share Link via OEmbed: ${url}`);
-                    const oembedUrl = `https://www.reddit.com/oembed?url=${encodeURIComponent(url)}`;
-                    const response = await fetch(oembedUrl, { headers: { 'User-Agent': discordUA }, signal: AbortSignal.timeout(5000) });
-                    
-                    if (response.ok) {
-                        const data = await response.json();
-                        isShowing = data && data.author_name && data.author_name !== '[deleted]';
-                    } else {
-                        isShowing = false; // Blocked or 404
-                    }
-                } else {
-                    // For standard links, use old.reddit.com JSON for high accuracy
-                    const baseUrl = url.split('?')[0].replace(/\/$/, '').replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://old.reddit.com');
-                    const jsonUrl = `${baseUrl}.json`;
-                    console.log(`[LinkCheck] Verifying Reddit link via JSON: ${jsonUrl}`);
+                // Step 3: Check if it's a comment or a post
+                // Comment JSON has 2 objects in array, Post has 1 or 2 but data[1] usually contains the specific comment if linked
+                const isCommentLink = verificationUrl.includes('/comments/') && verificationUrl.split('/comments/')[1].split('/').filter(p => p).length >= 3;
 
-                    const response = await fetch(jsonUrl, { headers: { 'User-Agent': discordUA }, signal: AbortSignal.timeout(5000) });
-                    
-                    if (!response.ok) {
-                        if (response.status === 404) {
-                            await message.react('❌');
-                            await message.reply('🎀 Oh no! This link has been automatically removed by Automod... 🌸');
-                        } else {
-                            await message.react('❓');
-                        }
-                        return;
-                    }
-
-                    const data = await response.json();
-                    
-                    if (commentId && Array.isArray(data) && data[1] && data[1].data.children.length > 0) {
-                        // It's a comment link
-                        const comment = data[1].data.children[0].data;
-                        isShowing = comment.author !== '[deleted]' && 
-                                    comment.body !== '[removed]' && 
-                                    comment.body !== '[deleted]' &&
-                                    !comment.removed_by_category;
-                    } else if (!commentId && Array.isArray(data) && data[0] && data[0].data.children.length > 0) {
-                        // It's a post link
-                        const post = data[0].data.children[0].data;
-                        isShowing = post.author !== '[deleted]' && 
-                                    post.selftext !== '[removed]' && 
-                                    post.selftext !== '[deleted]' &&
-                                    !post.removed_by_category;
-                    } else {
-                        isShowing = false; // No data found
-                    }
+                if (isCommentLink && Array.isArray(data) && data[1] && data[1].data.children.length > 0) {
+                    const comment = data[1].data.children[0].data;
+                    isShowing = comment.author !== '[deleted]' && 
+                                comment.body !== '[removed]' && 
+                                comment.body !== '[deleted]' &&
+                                !comment.removed_by_category;
+                } else if (Array.isArray(data) && data[0] && data[0].data.children.length > 0) {
+                    const post = data[0].data.children[0].data;
+                    isShowing = post.author !== '[deleted]' && 
+                                post.selftext !== '[removed]' && 
+                                post.selftext !== '[deleted]' &&
+                                !post.removed_by_category;
                 }
 
                 if (isShowing) {
@@ -668,7 +674,7 @@ client.on('messageCreate', async message => {
                 }
 
             } catch (error) {
-                console.error('[LinkCheck] Critical JSON Error:', error.message);
+                console.error('[LinkCheck] Critical Error:', error.message);
                 await message.react('❓').catch(() => {}); 
             }
         } else {
