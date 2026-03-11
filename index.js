@@ -642,21 +642,34 @@ client.on('messageCreate', async message => {
                 let isShowing = false;
 
                 // Step 3: Check if it's a comment or a post
-                // Comment JSON has 2 objects in array, Post has 1 or 2 but data[1] usually contains the specific comment if linked
                 const isCommentLink = verificationUrl.includes('/comments/') && verificationUrl.split('/comments/')[1].split('/').filter(p => p).length >= 3;
 
-                if (isCommentLink && Array.isArray(data) && data[1] && data[1].data.children.length > 0) {
-                    const comment = data[1].data.children[0].data;
-                    isShowing = comment.author !== '[deleted]' && 
-                                comment.body !== '[removed]' && 
-                                comment.body !== '[deleted]' &&
-                                !comment.removed_by_category;
-                } else if (Array.isArray(data) && data[0] && data[0].data.children.length > 0) {
-                    const post = data[0].data.children[0].data;
-                    isShowing = post.author !== '[deleted]' && 
-                                post.selftext !== '[removed]' && 
-                                post.selftext !== '[deleted]' &&
-                                !post.removed_by_category;
+                if (isCommentLink) {
+                    if (Array.isArray(data) && data[1] && data[1].data && data[1].data.children && data[1].data.children.length > 0) {
+                        const comment = data[1].data.children[0].data;
+                        isShowing = comment.author !== '[deleted]' && 
+                                    comment.body !== '[removed]' && 
+                                    comment.body !== '[deleted]' &&
+                                    !comment.removed_by_category;
+                        console.log(`[LinkCheck] Comment status - Author: ${comment.author}, Showing: ${isShowing}`);
+                    } else {
+                        // It's a comment link but the comment is missing from JSON
+                        console.log(`[LinkCheck] Comment missing from JSON children (verified as REMOVED)`);
+                        isShowing = false;
+                    }
+                } else {
+                    // It's a post link
+                    if (Array.isArray(data) && data[0] && data[0].data && data[0].data.children && data[0].data.children.length > 0) {
+                        const post = data[0].data.children[0].data;
+                        isShowing = post.author !== '[deleted]' && 
+                                    post.selftext !== '[removed]' && 
+                                    post.selftext !== '[deleted]' &&
+                                    !post.removed_by_category;
+                        console.log(`[LinkCheck] Post status - Author: ${post.author}, Showing: ${isShowing}`);
+                    } else {
+                        console.log(`[LinkCheck] Post data missing from JSON`);
+                        isShowing = false;
+                    }
                 }
 
                 if (isShowing) {
