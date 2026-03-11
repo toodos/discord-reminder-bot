@@ -643,9 +643,11 @@ client.on('messageCreate', async message => {
 
                 if (isShowing) {
                     await message.react('✅');
+                    await message.reply('✨ This Reddit link is not removed! It looks all good! 🌸');
                     console.log(`[LinkCheck] Verified Reddit link as SHOWING`);
                 } else {
                     await message.react('❌');
+                    await message.reply('🎀 Oh no! This link has been automatically removed by Automod... 🌸');
                     console.log(`[LinkCheck] Reddit link is REMOVED/DELETED`);
                 }
 
