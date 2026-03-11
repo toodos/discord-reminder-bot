@@ -598,18 +598,20 @@ client.on('messageCreate', async message => {
 
         if (redditMatch) {
             try {
-                console.log(`[LinkCheck] Verifying Reddit link via OEmbed: ${url}`);
-
-                const oembedUrl = `https://www.reddit.com/oembed?url=${encodeURIComponent(url)}`;
+                // Use old.reddit.com for JSON as it's more resilient to blocks
+                const baseUrl = url.split('?')[0].replace(/\/$/, '').replace('www.reddit.com', 'old.reddit.com');
+                const jsonUrl = `${baseUrl}.json`;
                 const discordUA = 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)';
 
-                const response = await fetch(oembedUrl, {
+                console.log(`[LinkCheck] Verifying Reddit link via JSON: ${jsonUrl}`);
+
+                const response = await fetch(jsonUrl, {
                     headers: { 'User-Agent': discordUA },
                     signal: AbortSignal.timeout(5000)
                 });
 
                 if (!response.ok) {
-                    console.log(`[LinkCheck] OEmbed Error: ${response.status} for ${url}`);
+                    console.log(`[LinkCheck] Reddit JSON Error: ${response.status} for ${jsonUrl}`);
                     if (response.status === 404) {
                         await message.react('❌');
                     } else {
@@ -620,20 +622,35 @@ client.on('messageCreate', async message => {
 
                 const data = await response.json();
                 
-                // If OEmbed returns data, the link is generally "live" and accessible.
-                // We can also check author_name if available.
-                const isShowing = data && data.author_name && data.author_name !== '[deleted]';
+                // For a specific comment link, data[1].data.children should contain the comment.
+                // If it's empty, the comment is likely removed or gone.
+                let isShowing = false;
+                
+                if (Array.isArray(data) && data[1] && data[1].data && data[1].data.children && data[1].data.children.length > 0) {
+                    const comment = data[1].data.children[0].data;
+                    // Check removal markers
+                    isShowing = comment.author !== '[deleted]' && 
+                                comment.body !== '[removed]' && 
+                                comment.body !== '[deleted]' &&
+                                !comment.removed_by_category;
+                    
+                    console.log(`[LinkCheck] Comment status - Author: ${comment.author}, Showing: ${isShowing}`);
+                } else if (!Array.isArray(data) || !data[1] || !data[1].data || data[1].data.children.length === 0) {
+                    // Empty children list on a comment permalink almost always means it's removed
+                    console.log(`[LinkCheck] No comment found in JSON children (likely removed)`);
+                    isShowing = false;
+                }
 
                 if (isShowing) {
                     await message.react('✅');
-                    console.log(`[LinkCheck] Verified Reddit link as SHOWING (Author: ${data.author_name})`);
+                    console.log(`[LinkCheck] Verified Reddit link as SHOWING`);
                 } else {
                     await message.react('❌');
-                    console.log(`[LinkCheck] Reddit link is REMOVED/DELETED (Author: ${data.author_name || 'Unknown'})`);
+                    console.log(`[LinkCheck] Reddit link is REMOVED/DELETED`);
                 }
 
             } catch (error) {
-                console.error('[LinkCheck] Critical OEmbed Error:', error.message);
+                console.error('[LinkCheck] Critical JSON Error:', error.message);
                 await message.react('❓').catch(() => {}); 
             }
         } else {
