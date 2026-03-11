@@ -478,8 +478,14 @@ client.on('interactionCreate', async interaction => {
                 return interaction.reply({ content: 'You are blacklisted from opening tickets.', ephemeral: true });
             }
 
+            const config = ticketDb.getGuildConfig(interaction.guildId);
+            const supportRoles = JSON.parse(category.roles || '[]');
+            const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator) || 
+                          (config && interaction.member.roles.cache.has(config.adminRoleId));
+            const isSupport = supportRoles.some(roleId => interaction.member.roles.cache.has(roleId));
+
             const active = ticketDb.getUserActiveTickets(interaction.user.id, interaction.guildId);
-            if (active.length >= category.maxTickets) {
+            if (active.length >= category.maxTickets && !isAdmin && !isSupport) {
                 return interaction.reply({ content: `You already have ${active.length} open ticket(s) in this category.`, ephemeral: true });
             }
 
