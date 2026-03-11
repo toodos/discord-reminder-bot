@@ -175,8 +175,6 @@ async function checkCooldowns() {
 }
 
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
-
     try {
 
         if (interaction.commandName === 'remind') {
