@@ -598,114 +598,42 @@ client.on('messageCreate', async message => {
 
         if (redditMatch) {
             try {
-                // The comment ID is either in the last group or can be inferred
-                let commentId = redditMatch[1];
-                
-                if (!commentId) {
-                    const parts = url.split('/');
-                    const lastPart = parts[parts.length - 1] || parts[parts.length - 2];
-                    if (lastPart && lastPart.length >= 6) commentId = lastPart;
-                }
+                console.log(`[LinkCheck] Verifying Reddit link via OEmbed: ${url}`);
 
-                console.log(`[LinkCheck] Verifying Reddit Comment ID: ${commentId || 'Unknown'}`);
+                const oembedUrl = `https://www.reddit.com/oembed?url=${encodeURIComponent(url)}`;
+                const discordUA = 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)';
 
-                const baseUrl = url.split('?')[0].replace(/\/$/, '');
-                const jsonUrl = `${baseUrl}.json?limit=1`;
+                const response = await fetch(oembedUrl, {
+                    headers: { 'User-Agent': discordUA },
+                    signal: AbortSignal.timeout(5000)
+                });
 
-                const userAgents = [
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0',
-                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15',
-                    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-                ];
-
-                let data = null;
-                let lastStatus = 200;
-
-                for (let i = 0; i < userAgents.length; i++) {
-                    // Random delay between 500ms and 1500ms to avoid fingerprinting
-                    if (i > 0) await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
-                    
-                    console.log(`[LinkCheck] Attempt ${i + 1} with UA: ${userAgents[i].substring(0, 40)}...`);
-                    
-                    try {
-                        const response = await fetch(jsonUrl, {
-                            headers: { 
-                                'User-Agent': userAgents[i],
-                                'Accept': 'application/json',
-                                'Cache-Control': 'no-cache'
-                            },
-                            signal: AbortSignal.timeout(5000) // 5 second timeout
-                        });
-
-                        lastStatus = response.status;
-
-                        if (response.ok) {
-                            data = await response.json();
-                            break;
-                        }
-
-                        console.log(`[LinkCheck] Attempt ${i + 1} failed: ${response.status} ${response.statusText}`);
-                        
-                        if (response.status === 404) {
-                            await message.react('❌');
-                            return;
-                        }
-
-                        // Continue to next UA for 429, 403, or other temporary errors
-                    } catch (fetchErr) {
-                        console.log(`[LinkCheck] Attempt ${i + 1} error: ${fetchErr.message}`);
-                        lastStatus = 'TIMEOUT/NETWORK_ERR';
+                if (!response.ok) {
+                    console.log(`[LinkCheck] OEmbed Error: ${response.status} for ${url}`);
+                    if (response.status === 404) {
+                        await message.react('❌');
+                    } else {
+                        await message.react('❓');
                     }
-                }
-
-                if (!data) {
-                    console.log(`[LinkCheck] FINAL FAILURE. All attempts exhausted. Last status: ${lastStatus}`);
-                    await message.react('❓');
                     return;
                 }
 
-                // Recursive function to find comment by ID
-                function findComment(children, id) {
-                    if (!children) return null;
-                    for (const child of children) {
-                        if (child.data.id === id || child.data.name === id || child.data.name === `t1_${id}`) return child.data;
-                        if (child.data.replies && child.data.replies.data && child.data.replies.data.children) {
-                            const found = findComment(child.data.replies.data.children, id);
-                            if (found) return found;
-                        }
-                    }
-                    return null;
-                }
-
-                let isShowing = false;
-                if (commentId && Array.isArray(data) && data[1] && data[1].data) {
-                    const comment = findComment(data[1].data.children, commentId);
-                    if (comment) {
-                        isShowing = comment.author !== '[deleted]' && 
-                                    comment.body !== '[removed]' && 
-                                    comment.body !== '[deleted]' &&
-                                    !comment.removed_by_category;
-                        console.log(`[LinkCheck] Comment status - Author: ${comment.author}, Showing: ${isShowing}`);
-                    } else {
-                        console.log(`[LinkCheck] Comment ID ${commentId} not found in JSON tree.`);
-                        isShowing = false;
-                    }
-                } else if (!commentId && Array.isArray(data) && data[0] && data[0].data) {
-                    const post = data[0].data.children[0]?.data;
-                    isShowing = post && post.author !== '[deleted]' && post.selftext !== '[removed]' && post.selftext !== '[deleted]';
-                }
+                const data = await response.json();
+                
+                // If OEmbed returns data, the link is generally "live" and accessible.
+                // We can also check author_name if available.
+                const isShowing = data && data.author_name && data.author_name !== '[deleted]';
 
                 if (isShowing) {
                     await message.react('✅');
-                    console.log(`[LinkCheck] Verified Reddit link as SHOWING`);
+                    console.log(`[LinkCheck] Verified Reddit link as SHOWING (Author: ${data.author_name})`);
                 } else {
                     await message.react('❌');
-                    console.log(`[LinkCheck] Reddit link is REMOVED/DELETED`);
+                    console.log(`[LinkCheck] Reddit link is REMOVED/DELETED (Author: ${data.author_name || 'Unknown'})`);
                 }
 
             } catch (error) {
-                console.error('[LinkCheck] Critical Reddit Error:', error.message);
+                console.error('[LinkCheck] Critical OEmbed Error:', error.message);
                 await message.react('❓').catch(() => {}); 
             }
         } else {
