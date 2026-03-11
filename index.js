@@ -601,7 +601,6 @@ client.on('messageCreate', async message => {
                 // The comment ID is either in the last group or can be inferred
                 let commentId = redditMatch[1];
                 
-                // If it's a short link or specific format, we might need to extract ID differently
                 if (!commentId) {
                     const parts = url.split('/');
                     const lastPart = parts[parts.length - 1] || parts[parts.length - 2];
@@ -610,39 +609,60 @@ client.on('messageCreate', async message => {
 
                 console.log(`[LinkCheck] Verifying Reddit Comment ID: ${commentId || 'Unknown'}`);
 
-                // Use .json endpoint for Reddit
                 const baseUrl = url.split('?')[0].replace(/\/$/, '');
-                const jsonUrl = `${baseUrl}.json?limit=1`; // limit=1 for faster response
-                
-                const response = await fetch(jsonUrl, {
-                    headers: { 
-                        // Using a more unique User-Agent as per Reddit API guidelines
-                        'User-Agent': 'nodejs:cute-discord-bot:v2.0 (by /u/bot_verifier)' 
-                    }
-                });
+                const jsonUrl = `${baseUrl}.json?limit=1`;
 
-                if (!response.ok) {
-                    console.log(`[LinkCheck] Reddit API Error: ${response.status} ${response.statusText} for ${jsonUrl}`);
+                const userAgents = [
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+                    'nodejs:cute-discord-bot:v2.0 (by /u/bot_verifier)',
+                    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+                ];
+
+                let data = null;
+                let lastStatus = 200;
+
+                for (let i = 0; i < userAgents.length; i++) {
+                    console.log(`[LinkCheck] Attempt ${i + 1} with UA: ${userAgents[i].substring(0, 30)}...`);
+                    
+                    const response = await fetch(jsonUrl, {
+                        headers: { 'User-Agent': userAgents[i] }
+                    });
+
+                    lastStatus = response.status;
+
+                    if (response.ok) {
+                        data = await response.json();
+                        break; // Success!
+                    }
+
+                    console.log(`[LinkCheck] Attempt ${i + 1} failed with status: ${response.status}`);
+                    
                     if (response.status === 404) {
                         await message.react('❌');
                         return;
                     }
-                    // If rate limited or forbidden, we might want to fallback to a standard check instead of a question mark
+
+                    // If it's a block (429/403), try the next one after a tiny pause
                     if (response.status === 429 || response.status === 403) {
-                        await message.react('✅'); // Fallback to basic check if blocked
-                        console.log(`[LinkCheck] Blocked by Reddit (${response.status}), falling back to standard ✅`);
-                        return;
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        continue;
                     }
-                    throw new Error(`Reddit API returned ${response.status}`);
+
+                    // For other errors, just stop and throw
+                    break;
                 }
 
-                const data = await response.json();
-                
+                if (!data) {
+                    console.log(`[LinkCheck] All User-Agents failed or blocked. Last Status: ${lastStatus}`);
+                    await message.react('❓');
+                    return;
+                }
+
                 // Recursive function to find comment by ID
                 function findComment(children, id) {
                     if (!children) return null;
                     for (const child of children) {
-                        // Sometimes ID is prefixed with t1_
                         if (child.data.id === id || child.data.name === id || child.data.name === `t1_${id}`) return child.data;
                         if (child.data.replies && child.data.replies.data && child.data.replies.data.children) {
                             const found = findComment(child.data.replies.data.children, id);
@@ -653,27 +673,21 @@ client.on('messageCreate', async message => {
                 }
 
                 let isShowing = false;
-                // Reddit JSON for comments is [post_data, comment_data]
                 if (commentId && Array.isArray(data) && data[1] && data[1].data) {
                     const comment = findComment(data[1].data.children, commentId);
                     if (comment) {
-                        // Stricter check for common removal markers
                         isShowing = comment.author !== '[deleted]' && 
                                     comment.body !== '[removed]' && 
                                     comment.body !== '[deleted]' &&
                                     !comment.removed_by_category;
-                        
-                        console.log(`[LinkCheck] Comment status - Author: ${comment.author}, Body: ${comment.body?.substring(0, 30)}...`);
+                        console.log(`[LinkCheck] Comment status - Author: ${comment.author}, Showing: ${isShowing}`);
                     } else {
-                        // If comment not found in results, it might be deep or removed
-                        console.log(`[LinkCheck] Comment ID ${commentId} not found in first page of results.`);
-                        // If it's a direct comment link and not in the tree, it's likely gone
-                        isShowing = false; 
+                        console.log(`[LinkCheck] Comment ID ${commentId} not found in JSON tree.`);
+                        isShowing = false;
                     }
                 } else if (!commentId && Array.isArray(data) && data[0] && data[0].data) {
-                    // It's a post link, not a comment link
                     const post = data[0].data.children[0]?.data;
-                    isShowing = post && post.author !== '[deleted]' && post.selftext !== '[removed]';
+                    isShowing = post && post.author !== '[deleted]' && post.selftext !== '[removed]' && post.selftext !== '[deleted]';
                 }
 
                 if (isShowing) {
@@ -686,8 +700,7 @@ client.on('messageCreate', async message => {
 
             } catch (error) {
                 console.error('[LinkCheck] Critical Reddit Error:', error.message);
-                // Fallback to ✅ so we don't block the user if the service is down
-                await message.react('✅').catch(() => {}); 
+                await message.react('❓').catch(() => {}); 
             }
         } else {
             // Non-Reddit link or not a comment link, just react with ✅
