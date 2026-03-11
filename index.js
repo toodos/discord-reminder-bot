@@ -613,48 +613,54 @@ client.on('messageCreate', async message => {
                 const jsonUrl = `${baseUrl}.json?limit=1`;
 
                 const userAgents = [
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-                    'nodejs:cute-discord-bot:v2.0 (by /u/bot_verifier)',
-                    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0',
+                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15',
+                    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
                 ];
 
                 let data = null;
                 let lastStatus = 200;
 
                 for (let i = 0; i < userAgents.length; i++) {
-                    console.log(`[LinkCheck] Attempt ${i + 1} with UA: ${userAgents[i].substring(0, 30)}...`);
+                    // Random delay between 500ms and 1500ms to avoid fingerprinting
+                    if (i > 0) await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
                     
-                    const response = await fetch(jsonUrl, {
-                        headers: { 'User-Agent': userAgents[i] }
-                    });
-
-                    lastStatus = response.status;
-
-                    if (response.ok) {
-                        data = await response.json();
-                        break; // Success!
-                    }
-
-                    console.log(`[LinkCheck] Attempt ${i + 1} failed with status: ${response.status}`);
+                    console.log(`[LinkCheck] Attempt ${i + 1} with UA: ${userAgents[i].substring(0, 40)}...`);
                     
-                    if (response.status === 404) {
-                        await message.react('❌');
-                        return;
-                    }
+                    try {
+                        const response = await fetch(jsonUrl, {
+                            headers: { 
+                                'User-Agent': userAgents[i],
+                                'Accept': 'application/json',
+                                'Cache-Control': 'no-cache'
+                            },
+                            signal: AbortSignal.timeout(5000) // 5 second timeout
+                        });
 
-                    // If it's a block (429/403), try the next one after a tiny pause
-                    if (response.status === 429 || response.status === 403) {
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        continue;
-                    }
+                        lastStatus = response.status;
 
-                    // For other errors, just stop and throw
-                    break;
+                        if (response.ok) {
+                            data = await response.json();
+                            break;
+                        }
+
+                        console.log(`[LinkCheck] Attempt ${i + 1} failed: ${response.status} ${response.statusText}`);
+                        
+                        if (response.status === 404) {
+                            await message.react('❌');
+                            return;
+                        }
+
+                        // Continue to next UA for 429, 403, or other temporary errors
+                    } catch (fetchErr) {
+                        console.log(`[LinkCheck] Attempt ${i + 1} error: ${fetchErr.message}`);
+                        lastStatus = 'TIMEOUT/NETWORK_ERR';
+                    }
                 }
 
                 if (!data) {
-                    console.log(`[LinkCheck] All User-Agents failed or blocked. Last Status: ${lastStatus}`);
+                    console.log(`[LinkCheck] FINAL FAILURE. All attempts exhausted. Last status: ${lastStatus}`);
                     await message.react('❓');
                     return;
                 }
