@@ -10,6 +10,46 @@ const {
     addReminder, getReminders, removeReminder, removeRemindersByUserId
 } = require('./utils/database');
 
+// Reddit API Authentication
+let redditAccessToken = null;
+let redditTokenExpiry = 0;
+
+async function getRedditAccessToken() {
+    const now = Date.now();
+    if (redditAccessToken && now < redditTokenExpiry) {
+        return redditAccessToken;
+    }
+
+    const clientId = process.env.REDDIT_CLIENT_ID;
+    const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret || clientId === 'your_client_id_here') {
+        throw new Error('Reddit API credentials missing or not configured.');
+    }
+
+    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const response = await fetch('https://www.reddit.com/api/v1/access_token', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'DiscordReminderBot/1.0'
+        },
+        body: 'grant_type=client_credentials'
+    });
+
+    if (!response.ok) {
+        const errorBody = await response.text();
+        console.error('[RedditAPI] Token Fetch Failed:', response.status, errorBody);
+        throw new Error(`Failed to get Reddit access token: ${response.status}`);
+    }
+
+    const data = await response.json();
+    redditAccessToken = data.access_token;
+    redditTokenExpiry = now + (data.expires_in * 1000) - 60000; // Buffer of 60 seconds
+    return redditAccessToken;
+}
+
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -625,7 +665,7 @@ client.on('messageCreate', async message => {
                     }
                 }
 
-                // Step 2: Normalize and Fetch JSON using Reddit App identity (Whitelisted for JSON)
+                // Step 2: Normalize and Fetch JSON using Official Reddit API (The Final Solution)
                 const pathParts = verificationUrl.split('/');
                 let baseUrl = verificationUrl;
                 let targetCommentId = null;
@@ -641,24 +681,39 @@ client.on('messageCreate', async message => {
                     }
                 }
 
-                const jsonUrl = baseUrl.replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://www.reddit.com') + '.json';
-                console.log(`[LinkCheck] Verifying: ${jsonUrl} (Comment: ${targetCommentId || 'Post'})`);
+                let response;
+                try {
+                    const token = await getRedditAccessToken();
+                    // Official API uses oauth.reddit.com for authenticated requests
+                    const apiUrl = baseUrl.replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://oauth.reddit.com') + '.json';
+                    
+                    console.log(`[LinkCheck] Verifying via API: ${apiUrl} (Comment: ${targetCommentId || 'Post'})`);
 
-                const response = await fetch(jsonUrl, { 
-                    headers: { 
-                        'User-Agent': redditAppUA,
-                        'Accept': 'application/json, text/plain, */*',
-                        'Accept-Language': 'en-US,en;q=0.5',
-                        'Referer': 'https://www.google.com/',
-                        'DNT': '1'
-                    }, 
-                    signal: AbortSignal.timeout(15000) 
-                });
+                    response = await fetch(apiUrl, { 
+                        headers: { 
+                            'Authorization': `Bearer ${token}`,
+                            'User-Agent': 'DiscordReminderBot/1.0'
+                        }, 
+                        signal: AbortSignal.timeout(15000) 
+                    });
+                } catch (apiErr) {
+                    console.error('[LinkCheck] API Error:', apiErr.message);
+                    if (apiErr.message.includes('credentials missing')) {
+                        await message.react('⚠️');
+                        await message.reply('🎀 Please set your `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET` in the `.env` file! 🌸');
+                    } else {
+                        await message.react('❓');
+                    }
+                    return;
+                }
                 
                 if (!response.ok) {
                     if (response.status === 404) {
                         await message.react('❌');
                         await message.reply('🎀 Oh no! This link has been automatically removed by Automod... 🌸');
+                    } else if (response.status === 401 || response.status === 403) {
+                        console.error(`[LinkCheck] API access denied (${response.status}). Check credentials.`);
+                        await message.react('⚠️');
                     } else {
                         console.error(`[LinkCheck] Fetch failed with status: ${response.status}`);
                         await message.react('❓');
