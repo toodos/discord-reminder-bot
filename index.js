@@ -619,9 +619,25 @@ client.on('messageCreate', async message => {
                     }
                 }
 
-                // Step 2: Convert to old.reddit.com JSON URL (handle /comment/ vs /comments/)
-                const jsonUrl = verificationUrl.replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://old.reddit.com') + '.json';
-                console.log(`[LinkCheck] Verifying via JSON: ${jsonUrl}`);
+                // Step 2: Resolve target JSON URL (Target the base post for reliability)
+                const pathParts = verificationUrl.split('/');
+                let baseUrl = verificationUrl;
+                let targetCommentId = null;
+
+                if (verificationUrl.includes('/comment/')) {
+                    baseUrl = verificationUrl.split('/comment/')[0];
+                    targetCommentId = verificationUrl.split('/comment/')[1].split('/')[0];
+                } else if (verificationUrl.includes('/comments/')) {
+                    const commentsIdx = pathParts.indexOf('comments');
+                    if (pathParts.length - commentsIdx >= 4) {
+                        // It's a comment link, target post base
+                        baseUrl = pathParts.slice(0, commentsIdx + 3).join('/');
+                        targetCommentId = pathParts[commentsIdx + 3];
+                    }
+                }
+
+                const jsonUrl = baseUrl.replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://www.reddit.com') + '.json';
+                console.log(`[LinkCheck] Verifying via JSON: ${jsonUrl} (Target Comment: ${targetCommentId || 'Post'})`);
 
                 const response = await fetch(jsonUrl, { 
                     headers: { 'User-Agent': browserUA }, 
@@ -641,37 +657,43 @@ client.on('messageCreate', async message => {
                 const data = await response.json();
                 let isShowing = false;
 
-                // Step 3: Check if it's a comment or a post
-                const pathParts = verificationUrl.split('/');
-                const isCommentLink = (verificationUrl.includes('/comments/') || verificationUrl.includes('/comment/')) && 
-                                     (pathParts.indexOf('comments') !== -1 ? pathParts.length - pathParts.indexOf('comments') >= 4 : pathParts.length - pathParts.indexOf('comment') >= 4);
-
-                if (isCommentLink) {
-                    // Search for the comment in the second element of the array (comments list)
-                    if (Array.isArray(data) && data[1] && data[1].data && data[1].data.children) {
-                        const commentId = pathParts[pathParts.length - 1];
-                        const children = data[1].data.children;
-                        
-                        // Try to find the specific comment by ID first
-                        let commentData = children.find(c => c.data && c.data.id === commentId)?.data;
-                        
-                        // Fallback: if not found by ID (maybe it's the only one), take the first child if it's a comment
-                        if (!commentData && children.length > 0 && children[0].kind === 't1') {
-                            commentData = children[0].data;
+                // Recursive function to find comment by ID in nested structure
+                function findCommentRecursive(obj, targetId) {
+                    if (!obj || typeof obj !== 'object') return null;
+                    if (obj.kind === 't1' && obj.data && obj.data.id === targetId) return obj.data;
+                    
+                    if (obj.data && obj.data.children && Array.isArray(obj.data.children)) {
+                        for (const child of obj.data.children) {
+                            const found = findCommentRecursive(child, targetId);
+                            if (found) return found;
                         }
+                    }
+                    
+                    if (obj.data && obj.data.replies && obj.data.replies.data) {
+                        return findCommentRecursive(obj.data.replies, targetId);
+                    }
+                    
+                    return null;
+                }
 
-                        if (commentData) {
-                            isShowing = commentData.author !== '[deleted]' && 
-                                        commentData.body !== '[removed]' && 
-                                        commentData.body !== '[deleted]' &&
-                                        !commentData.removed_by_category;
-                            console.log(`[LinkCheck] Comment status - Author: ${commentData.author}, Showing: ${isShowing}`);
-                        } else {
-                            console.log(`[LinkCheck] Comment ${commentId} not found in JSON children`);
-                            isShowing = false;
+                if (targetCommentId) {
+                    // It's a comment link, search for it
+                    let commentData = null;
+                    if (Array.isArray(data)) {
+                        for (const part of data) {
+                            commentData = findCommentRecursive(part, targetCommentId);
+                            if (commentData) break;
                         }
+                    }
+
+                    if (commentData) {
+                        isShowing = commentData.author !== '[deleted]' && 
+                                    commentData.body !== '[removed]' && 
+                                    commentData.body !== '[deleted]' &&
+                                    !commentData.removed_by_category;
+                        console.log(`[LinkCheck] Comment status - Author: ${commentData.author}, Showing: ${isShowing}`);
                     } else {
-                        console.log(`[LinkCheck] Unexpected JSON structure for comment link`);
+                        console.log(`[LinkCheck] Comment ${targetCommentId} not found in post JSON (Verified as REMOVED)`);
                         isShowing = false;
                     }
                 } else {
