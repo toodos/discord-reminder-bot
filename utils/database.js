@@ -104,6 +104,12 @@ function removeReminder(reminderId) {
     saveData(data);
 }
 
+function removeRemindersByUserId(userId) {
+    const data = getData();
+    data.reminders = data.reminders.filter(r => r.userId !== userId);
+    saveData(data);
+}
+
 function setMemory(slot, message) {
     const data = getData();
     data.memory[slot] = message;
