@@ -597,25 +597,24 @@ client.on('messageCreate', async message => {
 
         if (redditMatch) {
             try {
-                const browserUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+                // Use Facebook Crawler UA to bypass Reddit's bot/403 blocks
+                const crawlerUA = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
+                
                 let verificationUrl = url.split('?')[0].replace(/\/$/, '');
 
                 // Step 1: If it's a share link, resolve it first
                 if (url.includes('/s/')) {
-                    console.log(`[LinkCheck] Resolving Reddit Share Link: ${url}`);
                     try {
                         const resolveRes = await fetch(url, { 
-                            headers: { 'User-Agent': browserUA },
-                            redirect: 'follow', // Follow redirects to get the final URL
-                            signal: AbortSignal.timeout(5000)
+                            headers: { 'User-Agent': crawlerUA },
+                            redirect: 'follow',
+                            signal: AbortSignal.timeout(10000)
                         });
                         if (resolveRes.ok) {
                             verificationUrl = resolveRes.url.split('?')[0].replace(/\/$/, '');
-                            console.log(`[LinkCheck] Resolved to: ${verificationUrl}`);
                         }
                     } catch (resolveErr) {
                         console.error('[LinkCheck] Share Resolve Error:', resolveErr.message);
-                        // Continue with original URL if resolution fails, but it might fail later
                     }
                 }
 
@@ -630,18 +629,17 @@ client.on('messageCreate', async message => {
                 } else if (verificationUrl.includes('/comments/')) {
                     const commentsIdx = pathParts.indexOf('comments');
                     if (pathParts.length - commentsIdx >= 4) {
-                        // It's a comment link, target post base
                         baseUrl = pathParts.slice(0, commentsIdx + 3).join('/');
                         targetCommentId = pathParts[commentsIdx + 3];
                     }
                 }
 
                 const jsonUrl = baseUrl.replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://www.reddit.com') + '.json';
-                console.log(`[LinkCheck] Verifying via JSON: ${jsonUrl} (Target Comment: ${targetCommentId || 'Post'})`);
+                console.log(`[LinkCheck] Verifying: ${jsonUrl} (Comment: ${targetCommentId || 'Post'})`);
 
                 const response = await fetch(jsonUrl, { 
-                    headers: { 'User-Agent': browserUA }, 
-                    signal: AbortSignal.timeout(10000) 
+                    headers: { 'User-Agent': crawlerUA }, 
+                    signal: AbortSignal.timeout(15000) 
                 });
                 
                 if (!response.ok) {
@@ -693,7 +691,7 @@ client.on('messageCreate', async message => {
                                     !commentData.removed_by_category;
                         console.log(`[LinkCheck] Comment status - Author: ${commentData.author}, Showing: ${isShowing}`);
                     } else {
-                        console.log(`[LinkCheck] Comment ${targetCommentId} not found in post JSON (Verified as REMOVED)`);
+                        console.log(`[LinkCheck] Comment ${targetCommentId} NOT found in JSON data`);
                         isShowing = false;
                     }
                 } else {
