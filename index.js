@@ -597,23 +597,16 @@ client.on('messageCreate', async message => {
 
         if (redditMatch) {
             try {
-                // Use "Miracle" combination: Reddit App UA + Google Referer to bypass strict blocks
-                const redditUA = 'Reddit/Version 2024.10.0 (Android 13; Pixel 7)';
-                const redditHeaders = {
-                    'User-Agent': redditUA,
-                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                    'Accept-Language': 'en-US,en;q=0.5',
-                    'Referer': 'https://www.google.com/',
-                    'DNT': '1'
-                };
+                const discordUA = 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)';
+                const redditAppUA = 'Reddit/Version 2024.10.0 (Android 13; Pixel 7)';
                 
                 let verificationUrl = url.split('?')[0].replace(/\/$/, '');
 
-                // Step 1: If it's a share link, resolve it first
+                // Step 1: Resolve share link using Discordbot identity (Whitelisted for resolution)
                 if (url.includes('/s/')) {
                     try {
                         const resolveRes = await fetch(url, { 
-                            headers: redditHeaders,
+                            headers: { 'User-Agent': discordUA },
                             redirect: 'follow',
                             signal: AbortSignal.timeout(10000)
                         });
@@ -632,7 +625,7 @@ client.on('messageCreate', async message => {
                     }
                 }
 
-                // Step 2: Resolve target JSON URL (Target the base post for reliability)
+                // Step 2: Normalize and Fetch JSON using Reddit App identity (Whitelisted for JSON)
                 const pathParts = verificationUrl.split('/');
                 let baseUrl = verificationUrl;
                 let targetCommentId = null;
@@ -653,8 +646,11 @@ client.on('messageCreate', async message => {
 
                 const response = await fetch(jsonUrl, { 
                     headers: { 
-                        ...redditHeaders,
-                        'Accept': 'application/json, text/plain, */*'
+                        'User-Agent': redditAppUA,
+                        'Accept': 'application/json, text/plain, */*',
+                        'Accept-Language': 'en-US,en;q=0.5',
+                        'Referer': 'https://www.google.com/',
+                        'DNT': '1'
                     }, 
                     signal: AbortSignal.timeout(15000) 
                 });
