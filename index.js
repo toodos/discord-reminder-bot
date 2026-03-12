@@ -597,8 +597,8 @@ client.on('messageCreate', async message => {
 
         if (redditMatch) {
             try {
-                // Use Facebook Crawler UA to bypass Reddit's bot/403 blocks
-                const crawlerUA = 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)';
+                // Use Reddit Android App UA to bypass even the strictest blocks
+                const redditUA = 'Reddit/Version 2024.10.0 (Android 13; Pixel 7)';
                 
                 let verificationUrl = url.split('?')[0].replace(/\/$/, '');
 
@@ -606,7 +606,7 @@ client.on('messageCreate', async message => {
                 if (url.includes('/s/')) {
                     try {
                         const resolveRes = await fetch(url, { 
-                            headers: { 'User-Agent': crawlerUA },
+                            headers: { 'User-Agent': redditUA },
                             redirect: 'follow',
                             signal: AbortSignal.timeout(10000)
                         });
@@ -638,7 +638,11 @@ client.on('messageCreate', async message => {
                 console.log(`[LinkCheck] Verifying: ${jsonUrl} (Comment: ${targetCommentId || 'Post'})`);
 
                 const response = await fetch(jsonUrl, { 
-                    headers: { 'User-Agent': crawlerUA }, 
+                    headers: { 
+                        'User-Agent': redditUA,
+                        'Accept': 'application/json, text/plain, */*',
+                        'Accept-Language': 'en-US,en;q=0.9'
+                    }, 
                     signal: AbortSignal.timeout(15000) 
                 });
                 
