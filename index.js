@@ -597,13 +597,13 @@ client.on('messageCreate', async message => {
 
         if (redditMatch) {
             try {
-                // Use Reddit Android App UA + Specific Headers to bypass strict blocks
+                // Use "Miracle" combination: Reddit App UA + Google Referer to bypass strict blocks
                 const redditUA = 'Reddit/Version 2024.10.0 (Android 13; Pixel 7)';
                 const redditHeaders = {
                     'User-Agent': redditUA,
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
                     'Accept-Language': 'en-US,en;q=0.5',
-                    'Referer': 'https://www.reddit.com/',
+                    'Referer': 'https://www.google.com/',
                     'DNT': '1'
                 };
                 
@@ -612,8 +612,7 @@ client.on('messageCreate', async message => {
                 // Step 1: If it's a share link, resolve it first
                 if (url.includes('/s/')) {
                     try {
-                        const resolveUrl = url.replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://old.reddit.com');
-                        const resolveRes = await fetch(resolveUrl, { 
+                        const resolveRes = await fetch(url, { 
                             headers: redditHeaders,
                             redirect: 'follow',
                             signal: AbortSignal.timeout(10000)
