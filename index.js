@@ -10,46 +10,6 @@ const {
     addReminder, getReminders, removeReminder, removeRemindersByUserId
 } = require('./utils/database');
 
-// Reddit API Authentication
-let redditAccessToken = null;
-let redditTokenExpiry = 0;
-
-async function getRedditAccessToken() {
-    const now = Date.now();
-    if (redditAccessToken && now < redditTokenExpiry) {
-        return redditAccessToken;
-    }
-
-    const clientId = process.env.REDDIT_CLIENT_ID;
-    const clientSecret = process.env.REDDIT_CLIENT_SECRET;
-
-    if (!clientId || !clientSecret || clientId === 'your_client_id_here') {
-        throw new Error('Reddit API credentials missing or not configured.');
-    }
-
-    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    const response = await fetch('https://www.reddit.com/api/v1/access_token', {
-        method: 'POST',
-        headers: {
-            'Authorization': `Basic ${auth}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'DiscordReminderBot/1.0'
-        },
-        body: 'grant_type=client_credentials'
-    });
-
-    if (!response.ok) {
-        const errorBody = await response.text();
-        console.error('[RedditAPI] Token Fetch Failed:', response.status, errorBody);
-        throw new Error(`Failed to get Reddit access token: ${response.status}`);
-    }
-
-    const data = await response.json();
-    redditAccessToken = data.access_token;
-    redditTokenExpiry = now + (data.expires_in * 1000) - 60000; // Buffer of 60 seconds
-    return redditAccessToken;
-}
-
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -397,12 +357,7 @@ client.on('interactionCreate', async interaction => {
                     .setTimestamp();
 
                 await interaction.reply({ embeds: [embed], files: [file] });
-            }
-
-        // --- Ticket System Integration ---
-        
-        // Slash Commands for Tickets
-            if (interaction.commandName === 'setup') {
+            } else if (interaction.commandName === 'setup') {
                 const adminRole = interaction.options.getRole('admin_role');
                 const logChannel = interaction.options.getChannel('log_channel');
                 const transcriptChannel = interaction.options.getChannel('transcript_channel');
@@ -506,6 +461,122 @@ client.on('interactionCreate', async interaction => {
                 }
             } else if (interaction.commandName === 'close') {
                 await ticketLogic.closeTicket(interaction);
+            } else if (interaction.commandName === 'verify') {
+                const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
+                if (!isAdmin) {
+                    return interaction.reply({ content: '🎀 Only big-boss Administrators can verify links! 🌸', ephemeral: true });
+                }
+
+                const link = interaction.options.getString('link');
+                let targetMessage = null;
+
+                if (link) {
+                    const msgId = link.match(/\d+$/)?.[0] || link;
+                    try {
+                        targetMessage = await interaction.channel.messages.fetch(msgId);
+                    } catch (e) {
+                        return interaction.reply({ content: '🎀 I couldn\'t find that message! 🍭', ephemeral: true });
+                    }
+                } else {
+                    const messages = await interaction.channel.messages.fetch({ limit: 50 });
+                    const redditCommentRegex = /(?:[a-z0-9-]+\.)?(?:reddit\.com|redd\.it)\/(?:r\/[^\/]+\/)?(?:comments\/[^\/]+(?:\/[^\/]+\/([a-z0-9]+))?|s\/[a-z0-9]+)/i;
+                    targetMessage = messages.find(m => m.content.match(redditCommentRegex));
+                }
+
+                if (!targetMessage) {
+                    return interaction.reply({ content: '🎀 I couldn\'t find a recent Reddit link to verify! 🍭', ephemeral: true });
+                }
+
+                try {
+                    const loadingReaction = targetMessage.reactions.cache.get('1481725057024917715');
+                    if (loadingReaction) await loadingReaction.users.remove(client.user.id).catch(() => {});
+                    await targetMessage.react('1481725300349079673');
+                    await interaction.reply({ content: '🎀 Link verified manually! ✨', ephemeral: true });
+                    const botReply = await targetMessage.reply('🎀 Sent to Client! ✨🌸🌷');
+                    setTimeout(() => botReply.delete().catch(() => {}), 5000);
+                } catch (err) {
+                    console.error('[VerifyCommand] Error:', err.message);
+                    await interaction.reply({ content: '🎀 Something went wrong! ❓', ephemeral: true });
+                }
+            } else if (interaction.commandName === 'text') {
+                const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
+                if (!isAdmin) {
+                    return interaction.reply({ content: '🎀 Only big-boss Administrators can use this command! 🌸', ephemeral: true });
+                }
+                const textMessage = interaction.options.getString('message');
+                await interaction.reply({ content: '🎀 Sending your message... ✨', ephemeral: true });
+                await interaction.channel.send(textMessage);
+            } else if (interaction.commandName === 'memory') {
+                const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
+                if (!isAdmin) {
+                    return interaction.reply({ content: '🎀 Only big-boss Administrators can manage bot memory! 🌸', ephemeral: true });
+                }
+                const sub = interaction.options.getSubcommand();
+                if (sub === 'set') {
+                    const slot = interaction.options.getInteger('slot');
+                    const message = interaction.options.getString('message');
+                    ticketDb.setMemory(slot, message);
+                    await interaction.reply({ content: `🎀 Successfully saved message to Slot ${slot}! ✨🌸`, ephemeral: true });
+                } else if (sub === 'get') {
+                    const slot = interaction.options.getInteger('slot');
+                    const message = ticketDb.getMemory(slot);
+                    if (!message) {
+                        return interaction.reply({ content: `🎀 Slot ${slot} is currently empty! 🍭`, ephemeral: true });
+                    }
+                    await interaction.reply({ content: '🎀 Sending message from memory... ✨', ephemeral: true });
+                    await interaction.channel.send(message);
+                } else if (sub === 'list') {
+                    const allMemory = ticketDb.getAllMemory();
+                    const slots = [1, 2, 3, 4];
+                    let listStr = "";
+                    slots.forEach(slot => {
+                        const msg = allMemory[slot] ? (allMemory[slot].length > 50 ? allMemory[slot].substring(0, 47) + "..." : allMemory[slot]) : "*Empty*";
+                        listStr += `**Slot ${slot}**: ${msg}\n`;
+                    });
+
+                    const embed = new EmbedBuilder()
+                        .setColor('#ffc8dd')
+                        .setTitle('📋 Bot Memory Slots 🌸')
+                        .setDescription(`─── ⋅ ʚ ♡ ɞ ⋅ ───\n\n${listStr}\n─── ⋅ ʚ ♡ ɞ ⋅ ───`)
+                        .setTimestamp();
+
+                    await interaction.reply({ embeds: [embed], ephemeral: true });
+                }
+            }
+        } else if (interaction.isMessageContextMenuCommand()) {
+            if (interaction.commandName === 'Verify Link') {
+                const message = interaction.targetMessage;
+                const isAdmin = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator);
+
+                if (!isAdmin) {
+                    return interaction.reply({ content: '🎀 Only big-boss Administrators can verify links! 🌸', ephemeral: true });
+                }
+
+                const redditCommentRegex = /(?:[a-z0-9-]+\.)?(?:reddit\.com|redd\.it)\/(?:r\/[^\/]+\/)?(?:comments\/[^\/]+(?:\/[^\/]+\/([a-z0-9]+))?|s\/[a-z0-9]+)/i;
+                const hasReddit = message.content.match(redditCommentRegex);
+
+                if (!hasReddit) {
+                    return interaction.reply({ content: '🎀 I couldn\'t find a Reddit link in that message! 🍭', ephemeral: true });
+                }
+
+                try {
+                    // Remove loading and add checkmark
+                    const loadingReaction = message.reactions.cache.get('1481725057024917715');
+                    if (loadingReaction) {
+                        await loadingReaction.users.remove(client.user.id).catch(() => {});
+                    }
+                    await message.react('1481725300349079673');
+
+                    // Acknowledge the interaction
+                    await interaction.reply({ content: '🎀 Link verified! ✨', ephemeral: true });
+
+                    // Send the confirmation reply
+                    const botReply = await message.reply('🎀 Sent to Client! ✨🌸🌷');
+                    setTimeout(() => botReply.delete().catch(() => {}), 5000);
+                } catch (err) {
+                    console.error('[VerifyContext] Error:', err.message);
+                    await interaction.reply({ content: '🎀 Something went wrong while verifying the link! ❓', ephemeral: true });
+                }
             }
         }
 
@@ -637,164 +708,10 @@ client.on('messageCreate', async message => {
 
         if (redditMatch) {
             try {
-                const discordUA = 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)';
-                const redditAppUA = 'Reddit/Version 2024.10.0 (Android 13; Pixel 7)';
-                
-                let verificationUrl = url.split('?')[0].replace(/\/$/, '');
-
-                // Step 1: Resolve share link using Discordbot identity (Whitelisted for resolution)
-                if (url.includes('/s/')) {
-                    try {
-                        const resolveRes = await fetch(url, { 
-                            headers: { 'User-Agent': discordUA },
-                            redirect: 'follow',
-                            signal: AbortSignal.timeout(10000)
-                        });
-                        
-                        if (resolveRes.ok && resolveRes.url.includes('/comments/')) {
-                            verificationUrl = resolveRes.url.split('?')[0].replace(/\/$/, '');
-                        } else {
-                            console.error(`[LinkCheck] Resolve failed with status: ${resolveRes.status}, Final URL: ${resolveRes.url}`);
-                            await message.react('❓');
-                            return;
-                        }
-                    } catch (resolveErr) {
-                        console.error('[LinkCheck] Resolve Error:', resolveErr.message);
-                        await message.react('❓');
-                        return;
-                    }
-                }
-
-                // Step 2: Normalize and Fetch JSON using Official Reddit API (The Final Solution)
-                const pathParts = verificationUrl.split('/');
-                let baseUrl = verificationUrl;
-                let targetCommentId = null;
-
-                if (verificationUrl.includes('/comment/')) {
-                    baseUrl = verificationUrl.split('/comment/')[0];
-                    targetCommentId = verificationUrl.split('/comment/')[1].split('/')[0];
-                } else if (verificationUrl.includes('/comments/')) {
-                    const commentsIdx = pathParts.indexOf('comments');
-                    if (pathParts.length - commentsIdx >= 4) {
-                        baseUrl = pathParts.slice(0, commentsIdx + 3).join('/');
-                        targetCommentId = pathParts[commentsIdx + 3];
-                    }
-                }
-
-                let response;
-                try {
-                    const token = await getRedditAccessToken();
-                    // Official API uses oauth.reddit.com for authenticated requests
-                    const apiUrl = baseUrl.replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://oauth.reddit.com') + '.json';
-                    
-                    console.log(`[LinkCheck] Verifying via API: ${apiUrl} (Comment: ${targetCommentId || 'Post'})`);
-
-                    response = await fetch(apiUrl, { 
-                        headers: { 
-                            'Authorization': `Bearer ${token}`,
-                            'User-Agent': 'DiscordReminderBot/1.0'
-                        }, 
-                        signal: AbortSignal.timeout(15000) 
-                    });
-                } catch (apiErr) {
-                    console.error('[LinkCheck] API Error:', apiErr.message);
-                    if (apiErr.message.includes('credentials missing')) {
-                        await message.react('⚠️');
-                        await message.reply('🎀 Please set your `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET` in the `.env` file! 🌸');
-                    } else {
-                        await message.react('❓');
-                    }
-                    return;
-                }
-                
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        await message.react('❌');
-                        await message.reply('🎀 Oh no! This link has been automatically removed by Automod... 🌸');
-                    } else if (response.status === 401 || response.status === 403) {
-                        console.error(`[LinkCheck] API access denied (${response.status}). Check credentials.`);
-                        await message.react('⚠️');
-                    } else {
-                        console.error(`[LinkCheck] Fetch failed with status: ${response.status}`);
-                        await message.react('❓');
-                    }
-                    return;
-                }
-
-                const data = await response.json();
-                let isShowing = false;
-
-                // Recursive function to find comment by ID in nested structure
-                function findCommentRecursive(obj, targetId) {
-                    if (!obj || typeof obj !== 'object') return null;
-                    if (obj.kind === 't1' && obj.data && obj.data.id === targetId) return obj.data;
-                    
-                    if (obj.data && obj.data.children && Array.isArray(obj.data.children)) {
-                        for (const child of obj.data.children) {
-                            const found = findCommentRecursive(child, targetId);
-                            if (found) return found;
-                        }
-                    }
-                    
-                    if (obj.data && obj.data.replies && obj.data.replies.data) {
-                        return findCommentRecursive(obj.data.replies, targetId);
-                    }
-                    
-                    return null;
-                }
-
-                if (targetCommentId) {
-                    // It's a comment link, search for it
-                    let commentData = null;
-                    if (Array.isArray(data)) {
-                        for (const part of data) {
-                            commentData = findCommentRecursive(part, targetCommentId);
-                            if (commentData) break;
-                        }
-                    }
-
-                    if (commentData) {
-                        isShowing = commentData.author !== '[deleted]' && 
-                                    commentData.body !== '[removed]' && 
-                                    commentData.body !== '[deleted]' &&
-                                    !commentData.removed_by_category;
-                        console.log(`[LinkCheck] Comment status - Author: ${commentData.author}, Showing: ${isShowing}`);
-                    } else {
-                        console.log(`[LinkCheck] Comment ${targetCommentId} NOT found in JSON data`);
-                        isShowing = false;
-                    }
-                } else {
-                    // It's a post link
-                    if (Array.isArray(data) && data[0] && data[0].data && data[0].data.children && data[0].data.children.length > 0) {
-                        const post = data[0].data.children[0].data;
-                        isShowing = post.author !== '[deleted]' && 
-                                    post.selftext !== '[removed]' && 
-                                    post.selftext !== '[deleted]' &&
-                                    !post.removed_by_category;
-                        console.log(`[LinkCheck] Post status - Author: ${post.author}, Showing: ${isShowing}`);
-                    } else {
-                        console.log(`[LinkCheck] Post data missing from JSON`);
-                        isShowing = false;
-                    }
-                }
-
-                if (isShowing) {
-                    await message.react('✅');
-                    const reply = await message.reply('✨ This Reddit link is approved! Sending to client now... ⏳ 🌸');
-                    
-                    setTimeout(async () => {
-                        try { await reply.edit('✅ Sent to client! 🌸'); } catch (e) {}
-                    }, 60000);
-                    console.log(`[LinkCheck] Verified Reddit link as SHOWING`);
-                } else {
-                    await message.react('❌');
-                    await message.reply('🎀 Oh no! This link has been automatically removed by Automod... 🌸');
-                    console.log(`[LinkCheck] Reddit link is REMOVED/DELETED`);
-                }
-
+                console.log(`[LinkCheck] Reddit link detected in ${message.channel.name}, reacting with custom loading emoji`);
+                await message.react('1481725057024917715');
             } catch (error) {
-                console.error('[LinkCheck] Critical Error:', error.message);
-                await message.react('❓').catch(() => {}); 
+                console.error('[LinkCheck] Error reacting to Reddit link:', error.message);
             }
         } else {
             // Non-Reddit link or not a comment link, just react with ✅

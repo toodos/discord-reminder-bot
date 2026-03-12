@@ -20,9 +20,10 @@ function getData() {
         if (!data.users) data.users = {};
         if (!data.cooldowns) data.cooldowns = [];
         if (!data.reminders) data.reminders = [];
+        if (!data.memory) data.memory = {};
         return data;
     } catch (e) {
-        return { users: {}, cooldowns: [], reminders: [] };
+        return { users: {}, cooldowns: [], reminders: [], memory: {} };
     }
 }
 
@@ -103,14 +104,24 @@ function removeReminder(reminderId) {
     saveData(data);
 }
 
-function removeRemindersByUserId(userId) {
+function setMemory(slot, message) {
     const data = getData();
-    data.reminders = data.reminders.filter(r => r.userId !== userId);
+    data.memory[slot] = message;
     saveData(data);
+}
+
+function getMemory(slot) {
+    const data = getData();
+    return data.memory[slot] || null;
+}
+
+function getAllMemory() {
+    return getData().memory;
 }
 
 module.exports = {
     getUser, addMoney, removeMoney, setCooldown, getCooldowns,
     clearCooldown, removeCooldownByUserId, getAllUsers,
-    addReminder, getReminders, removeReminder, removeRemindersByUserId
+    addReminder, getReminders, removeReminder, removeRemindersByUserId,
+    setMemory, getMemory, getAllMemory
 };

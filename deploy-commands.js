@@ -181,6 +181,93 @@ const commands = [
             }
         ],
     },
+    {
+        name: 'Verify Link',
+        type: 3, // MESSAGE
+        default_member_permissions: PermissionFlagsBits.Administrator.toString(),
+    },
+    {
+        name: 'verify',
+        description: 'Verify a Reddit link manually 🎀',
+        default_member_permissions: PermissionFlagsBits.Administrator.toString(),
+        options: [
+            {
+                name: 'link',
+                description: 'The link to the message containing the Reddit link 🌷',
+                type: 3, // STRING
+                required: false,
+            }
+        ]
+    },
+    {
+        name: 'text',
+        description: 'Send a customizable message as the bot! 🎀',
+        default_member_permissions: PermissionFlagsBits.Administrator.toString(),
+        options: [
+            {
+                name: 'message',
+                description: 'What should I say? ✨',
+                type: 3, // STRING
+                required: true,
+            }
+        ]
+    },
+    {
+        name: 'memory',
+        description: 'Manage bot memory slots! 🎀',
+        default_member_permissions: PermissionFlagsBits.Administrator.toString(),
+        options: [
+            {
+                name: 'set',
+                description: 'Set a message in a memory slot ✨',
+                type: 1, // SUB_COMMAND
+                options: [
+                    {
+                        name: 'slot',
+                        description: 'Memory slot (1-4) 🌷',
+                        type: 4, // INTEGER
+                        required: true,
+                        choices: [
+                            { name: 'Slot 1', value: 1 },
+                            { name: 'Slot 2', value: 2 },
+                            { name: 'Slot 3', value: 3 },
+                            { name: 'Slot 4', value: 4 }
+                        ]
+                    },
+                    {
+                        name: 'message',
+                        description: 'The message to remember 🍰',
+                        type: 3, // STRING
+                        required: true
+                    }
+                ]
+            },
+            {
+                name: 'get',
+                description: 'Send a message from a memory slot 🍬',
+                type: 1, // SUB_COMMAND
+                options: [
+                    {
+                        name: 'slot',
+                        description: 'Memory slot (1-4) 🍭',
+                        type: 4, // INTEGER
+                        required: true,
+                        choices: [
+                            { name: 'Slot 1', value: 1 },
+                            { name: 'Slot 2', value: 2 },
+                            { name: 'Slot 3', value: 3 },
+                            { name: 'Slot 4', value: 4 }
+                        ]
+                    }
+                ]
+            },
+            {
+                name: 'list',
+                description: 'See all stored memory messages 📋',
+                type: 1 // SUB_COMMAND
+            }
+        ]
+    },
     ...ticketCommands
 ];
 
