@@ -597,7 +597,7 @@ client.on('messageCreate', async message => {
 
         if (redditMatch) {
             try {
-                const discordUA = 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)';
+                const browserUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
                 let verificationUrl = url.split('?')[0].replace(/\/$/, '');
 
                 // Step 1: If it's a share link, resolve it first
@@ -605,7 +605,7 @@ client.on('messageCreate', async message => {
                     console.log(`[LinkCheck] Resolving Reddit Share Link: ${url}`);
                     try {
                         const resolveRes = await fetch(url, { 
-                            headers: { 'User-Agent': discordUA },
+                            headers: { 'User-Agent': browserUA },
                             redirect: 'follow', // Follow redirects to get the final URL
                             signal: AbortSignal.timeout(5000)
                         });
@@ -619,13 +619,13 @@ client.on('messageCreate', async message => {
                     }
                 }
 
-                // Step 2: Convert to old.reddit.com JSON URL
+                // Step 2: Convert to old.reddit.com JSON URL (handle /comment/ vs /comments/)
                 const jsonUrl = verificationUrl.replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://old.reddit.com') + '.json';
                 console.log(`[LinkCheck] Verifying via JSON: ${jsonUrl}`);
 
                 const response = await fetch(jsonUrl, { 
-                    headers: { 'User-Agent': discordUA }, 
-                    signal: AbortSignal.timeout(5000) 
+                    headers: { 'User-Agent': browserUA }, 
+                    signal: AbortSignal.timeout(10000) 
                 });
                 
                 if (!response.ok) {
@@ -642,19 +642,36 @@ client.on('messageCreate', async message => {
                 let isShowing = false;
 
                 // Step 3: Check if it's a comment or a post
-                const isCommentLink = verificationUrl.includes('/comments/') && verificationUrl.split('/comments/')[1].split('/').filter(p => p).length >= 3;
+                const pathParts = verificationUrl.split('/');
+                const isCommentLink = (verificationUrl.includes('/comments/') || verificationUrl.includes('/comment/')) && 
+                                     (pathParts.indexOf('comments') !== -1 ? pathParts.length - pathParts.indexOf('comments') >= 4 : pathParts.length - pathParts.indexOf('comment') >= 4);
 
                 if (isCommentLink) {
-                    if (Array.isArray(data) && data[1] && data[1].data && data[1].data.children && data[1].data.children.length > 0) {
-                        const comment = data[1].data.children[0].data;
-                        isShowing = comment.author !== '[deleted]' && 
-                                    comment.body !== '[removed]' && 
-                                    comment.body !== '[deleted]' &&
-                                    !comment.removed_by_category;
-                        console.log(`[LinkCheck] Comment status - Author: ${comment.author}, Showing: ${isShowing}`);
+                    // Search for the comment in the second element of the array (comments list)
+                    if (Array.isArray(data) && data[1] && data[1].data && data[1].data.children) {
+                        const commentId = pathParts[pathParts.length - 1];
+                        const children = data[1].data.children;
+                        
+                        // Try to find the specific comment by ID first
+                        let commentData = children.find(c => c.data && c.data.id === commentId)?.data;
+                        
+                        // Fallback: if not found by ID (maybe it's the only one), take the first child if it's a comment
+                        if (!commentData && children.length > 0 && children[0].kind === 't1') {
+                            commentData = children[0].data;
+                        }
+
+                        if (commentData) {
+                            isShowing = commentData.author !== '[deleted]' && 
+                                        commentData.body !== '[removed]' && 
+                                        commentData.body !== '[deleted]' &&
+                                        !commentData.removed_by_category;
+                            console.log(`[LinkCheck] Comment status - Author: ${commentData.author}, Showing: ${isShowing}`);
+                        } else {
+                            console.log(`[LinkCheck] Comment ${commentId} not found in JSON children`);
+                            isShowing = false;
+                        }
                     } else {
-                        // It's a comment link but the comment is missing from JSON
-                        console.log(`[LinkCheck] Comment missing from JSON children (verified as REMOVED)`);
+                        console.log(`[LinkCheck] Unexpected JSON structure for comment link`);
                         isShowing = false;
                     }
                 } else {
