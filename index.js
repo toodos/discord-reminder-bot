@@ -612,16 +612,24 @@ client.on('messageCreate', async message => {
                 // Step 1: If it's a share link, resolve it first
                 if (url.includes('/s/')) {
                     try {
-                        const resolveRes = await fetch(url, { 
+                        const resolveUrl = url.replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://old.reddit.com');
+                        const resolveRes = await fetch(resolveUrl, { 
                             headers: redditHeaders,
                             redirect: 'follow',
                             signal: AbortSignal.timeout(10000)
                         });
-                        if (resolveRes.ok) {
+                        
+                        if (resolveRes.ok && resolveRes.url.includes('/comments/')) {
                             verificationUrl = resolveRes.url.split('?')[0].replace(/\/$/, '');
+                        } else {
+                            console.error(`[LinkCheck] Resolve failed with status: ${resolveRes.status}, Final URL: ${resolveRes.url}`);
+                            await message.react('❓');
+                            return;
                         }
                     } catch (resolveErr) {
                         console.error('[LinkCheck] Resolve Error:', resolveErr.message);
+                        await message.react('❓');
+                        return;
                     }
                 }
 
