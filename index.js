@@ -597,29 +597,31 @@ client.on('messageCreate', async message => {
 
         if (redditMatch) {
             try {
-                // Use Reddit Android App UA to bypass even the strictest blocks
+                // Use Reddit Android App UA + Specific Headers to bypass strict blocks
                 const redditUA = 'Reddit/Version 2024.10.0 (Android 13; Pixel 7)';
+                const redditHeaders = {
+                    'User-Agent': redditUA,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Referer': 'https://www.reddit.com/',
+                    'DNT': '1'
+                };
                 
                 let verificationUrl = url.split('?')[0].replace(/\/$/, '');
-                console.log(`[LinkCheck] Start verification for: ${url}`);
 
                 // Step 1: If it's a share link, resolve it first
                 if (url.includes('/s/')) {
-                    console.log(`[LinkCheck] Resolving Share Link...`);
                     try {
                         const resolveRes = await fetch(url, { 
-                            headers: { 'User-Agent': redditUA },
+                            headers: redditHeaders,
                             redirect: 'follow',
                             signal: AbortSignal.timeout(10000)
                         });
-                        console.log(`[LinkCheck] Resolve Status: ${resolveRes.status} -> ${resolveRes.url}`);
                         if (resolveRes.ok) {
                             verificationUrl = resolveRes.url.split('?')[0].replace(/\/$/, '');
-                        } else {
-                            console.log(`[LinkCheck] Resolve FAILED with status: ${resolveRes.status}`);
                         }
                     } catch (resolveErr) {
-                        console.error('[LinkCheck] Resolve Exception:', resolveErr.message);
+                        console.error('[LinkCheck] Resolve Error:', resolveErr.message);
                     }
                 }
 
@@ -640,26 +642,22 @@ client.on('messageCreate', async message => {
                 }
 
                 const jsonUrl = baseUrl.replace(/https?:\/\/([a-z0-9-]+\.)?reddit\.com/i, 'https://www.reddit.com') + '.json';
-                console.log(`[LinkCheck] Fetching JSON: ${jsonUrl} (Target: ${targetCommentId || 'Post'})`);
+                console.log(`[LinkCheck] Verifying: ${jsonUrl} (Comment: ${targetCommentId || 'Post'})`);
 
                 const response = await fetch(jsonUrl, { 
                     headers: { 
-                        'User-Agent': redditUA,
-                        'Accept': 'application/json, text/plain, */*',
-                        'Accept-Language': 'en-US,en;q=0.9'
+                        ...redditHeaders,
+                        'Accept': 'application/json, text/plain, */*'
                     }, 
                     signal: AbortSignal.timeout(15000) 
                 });
                 
-                console.log(`[LinkCheck] Fetch Status: ${response.status}`);
-                
                 if (!response.ok) {
-                    const errorBody = await response.text().catch(() => 'No body');
-                    console.error(`[LinkCheck] Fetch ERROR (${response.status}): ${errorBody.substring(0, 200)}`);
                     if (response.status === 404) {
                         await message.react('❌');
                         await message.reply('🎀 Oh no! This link has been automatically removed by Automod... 🌸');
                     } else {
+                        console.error(`[LinkCheck] Fetch failed with status: ${response.status}`);
                         await message.react('❓');
                     }
                     return;
@@ -671,10 +669,7 @@ client.on('messageCreate', async message => {
                 // Recursive function to find comment by ID in nested structure
                 function findCommentRecursive(obj, targetId) {
                     if (!obj || typeof obj !== 'object') return null;
-                    if (obj.kind === 't1' && obj.data && obj.data.id === targetId) {
-                        console.log(`[LinkCheck] Found target comment: ${targetId}`);
-                        return obj.data;
-                    }
+                    if (obj.kind === 't1' && obj.data && obj.data.id === targetId) return obj.data;
                     
                     if (obj.data && obj.data.children && Array.isArray(obj.data.children)) {
                         for (const child of obj.data.children) {
