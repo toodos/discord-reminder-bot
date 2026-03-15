@@ -189,7 +189,6 @@ const commands = [
     {
         name: 'verify',
         description: 'Verify a Reddit link manually 🎀',
-        default_member_permissions: PermissionFlagsBits.Administrator.toString(),
         options: [
             {
                 name: 'link',
@@ -202,7 +201,6 @@ const commands = [
     {
         name: 'text',
         description: 'Send a customizable message as the bot! 🎀',
-        default_member_permissions: PermissionFlagsBits.Administrator.toString(),
         options: [
             {
                 name: 'message',

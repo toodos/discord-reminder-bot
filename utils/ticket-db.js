@@ -76,6 +76,11 @@ db.exec(`
         ratingCount INTEGER DEFAULT 0,
         PRIMARY KEY (guildId, staffId)
     );
+
+    CREATE TABLE IF NOT EXISTS memory (
+        slot INTEGER PRIMARY KEY,
+        message TEXT
+    );
 `);
 
 module.exports = {
@@ -121,5 +126,16 @@ module.exports = {
         } else {
             db.prepare('UPDATE staff_stats SET ticketsHandled = ticketsHandled + 1 WHERE guildId = ? AND staffId = ?').run(guildId, staffId);
         }
+    },
+    setMemory: (slot, message) => db.prepare('INSERT OR REPLACE INTO memory (slot, message) VALUES (?, ?)').run(slot, message),
+    getMemory: (slot) => {
+        const row = db.prepare('SELECT message FROM memory WHERE slot = ?').get(slot);
+        return row ? row.message : null;
+    },
+    getAllMemory: () => {
+        const rows = db.prepare('SELECT * FROM memory').all();
+        const memory = {};
+        rows.forEach(row => { memory[row.slot] = row.message; });
+        return memory;
     }
 };

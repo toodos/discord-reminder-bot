@@ -68,6 +68,8 @@ node index.js
 | `/remind` | `time` `message` `[channel]` `[user]` - Set a reminder! |
 | `/cd` | `user` `[time]` - Put a user in a cozy nap (cooldown). |
 | `/remove_cd` | `user` - Wake someone up early! (Admin Only) |
+| `/verify` | `[link]` - Manually verify a Reddit link. (Admin Only) |
+| `Verify Link` | (Context Menu) Right-click a message to verify. (Admin Only) |
 
 ### 💰 Economy
 | Command | Description |
