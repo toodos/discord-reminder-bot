@@ -3,7 +3,7 @@
  */
 const { EmbedBuilder } = require('discord.js');
 const db = require('../../utils/database');
-const { COLORS } = require('../../utils/embeds');
+const { categoryListEmbed, errorEmbed, COLORS } = require('../../utils/embeds');
 
 module.exports = {
     name: 'category',
@@ -27,15 +27,10 @@ module.exports = {
         } else if (sub === 'list') {
             const categories = db.getCategories(interaction.guildId);
             if (categories.length === 0) {
-                return interaction.reply({ content: 'No ticket categories found! Create one with `/category create`. 🌷', ephemeral: true });
+                return interaction.reply({ embeds: [errorEmbed('No ticket categories found! Create one with `/category create`.')], ephemeral: true });
             }
 
-            const embed = new EmbedBuilder()
-                .setColor(COLORS.gold)
-                .setTitle('📋 Ticket Categories 🌸')
-                .setDescription(categories.map(c => `**${c.name}** ${c.emoji} — \`${c.id}\``).join('\n'))
-                .setTimestamp();
-
+            const embed = categoryListEmbed(categories);
             await interaction.reply({ embeds: [embed], ephemeral: true });
 
         } else if (sub === 'delete') {
@@ -43,7 +38,7 @@ module.exports = {
             const category = db.getCategory(id);
 
             if (!category || category.guildId !== interaction.guildId) {
-                return interaction.reply({ content: "I couldn't find that category ID. Check `/category list` for valid IDs! 🍭", ephemeral: true });
+                return interaction.reply({ embeds: [errorEmbed("I couldn't find that category ID. Check `/category list` for valid IDs!")], ephemeral: true });
             }
 
             db.deleteCategory(id);

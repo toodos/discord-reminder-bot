@@ -2,6 +2,8 @@
  * commands/tickets/setup.js
  */
 const db = require('../../utils/database');
+const { EmbedBuilder } = require('discord.js');
+const { errorEmbed, COLORS } = require('../../utils/embeds');
 
 module.exports = {
     name: 'setup',
@@ -16,8 +18,19 @@ module.exports = {
             transcriptChannelId: transcriptChannel.id,
         });
 
+        const embed = new EmbedBuilder()
+            .setColor(COLORS.success)
+            .setTitle('✅ Ticket System Configured')
+            .setDescription('The ticket system has been successfully configured with the following settings:')
+            .addFields(
+                { name: '👤 Admin Role', value: `${adminRole}`, inline: true },
+                { name: '📝 Logs', value: `${logChannel}`, inline: true },
+                { name: '📄 Transcripts', value: `${transcriptChannel}`, inline: true }
+            )
+            .setFooter({ text: 'Run /category create to set up your departments!' });
+
         await interaction.reply({
-            content: `✅ **Ticket System Configured!**\n\n**Admin Role:** ${adminRole}\n**Logs:** ${logChannel}\n**Transcripts:** ${transcriptChannel}\n\nRun \`/category create\` to set up your departments! ✨`,
+            embeds: [embed],
             ephemeral: true,
         });
     },

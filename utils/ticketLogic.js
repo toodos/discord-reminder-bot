@@ -59,8 +59,8 @@ async function createTicket(interaction, category, answers) {
 
     const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('ticket_claim').setLabel('👤 Claim').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('ticket_manage_users').setLabel('⚙️ Manage Users').setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('ticket_close_prompt').setLabel('🔒 Close').setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId('ticket_manage_users').setLabel('➕ Manage Users').setStyle(ButtonStyle.Secondary),
     );
 
     const roleMention = staffRoles[0] ? `<@&${staffRoles[0]}>` : '';
@@ -76,19 +76,36 @@ async function claimTicket(interaction) {
     }
 
     db.updateTicket(interaction.channelId, { claimantId: interaction.user.id });
-    await interaction.reply({
-        content: `✅ Ticket claimed by ${interaction.user}! 🎀`,
+
+    // Update the message buttons to show who claimed it
+    const message = interaction.message;
+    const oldRow = message.components[0];
+    const newRow = new ActionRowBuilder().addComponents(
+        new ButtonBuilder(oldRow.components[0].data).setLabel(`Claimed by ${interaction.user.username}`).setDisabled(true),
+        new ButtonBuilder(oldRow.components[1].data),
+        new ButtonBuilder(oldRow.components[2].data),
+    );
+
+    await interaction.update({ components: [newRow] });
+    await interaction.followUp({
+        content: `✅ Ticket claimed by ${interaction.user}!`,
         allowedMentions: { parse: [] },
     });
 }
 
 async function closePrompt(interaction) {
+    const embed = new EmbedBuilder()
+        .setColor(COLORS.danger)
+        .setTitle('⚠️ Close Confirmation')
+        .setDescription('Are you sure you want to close this ticket? This will generate a final transcript and delete the channel.');
+
     const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('ticket_close_confirm').setLabel('Yes, Close It').setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId('ticket_close_cancel').setLabel('Nevermind').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('ticket_close_confirm').setLabel('✅ Confirm').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId('ticket_close_cancel').setLabel('✖️ Cancel').setStyle(ButtonStyle.Secondary),
     );
+
     await interaction.reply({
-        content: '⚠️ Are you sure you want to close this ticket? A transcript will be saved.',
+        embeds: [embed],
         components: [row],
         ephemeral: true,
     });
@@ -97,12 +114,16 @@ async function closePrompt(interaction) {
 async function closeTicket(interaction) {
     const ticket = db.getTicket(interaction.channelId);
     if (!ticket) {
-        return interaction.reply({ content: 'This channel is not a ticket.', ephemeral: true });
+        return interaction.reply({ embeds: [errorEmbed('This channel is not a ticket.')], ephemeral: true });
     }
 
     const config = db.getGuildConfig(interaction.guildId);
 
-    await interaction.reply({ content: '🔒 Closing ticket and generating transcript...' });
+    const closingEmbed = new EmbedBuilder()
+        .setColor(COLORS.info)
+        .setDescription('🔒 **Closing ticket and generating transcript...**');
+
+    await interaction.reply({ embeds: [closingEmbed] });
 
     let file;
     try {
@@ -151,7 +172,7 @@ async function manageUsers(interaction) {
         .setMaxValues(10);
 
     await interaction.reply({
-        content: '🌸 Select users to add to this ticket. Unselecting removes their access.',
+        embeds: [new EmbedBuilder().setColor(COLORS.info).setTitle('👤 Manage User Access').setDescription('Select users to add to this ticket below. Unselecting a user will remove their access.')],
         components: [new ActionRowBuilder().addComponents(select)],
         ephemeral: true,
     });
@@ -159,7 +180,7 @@ async function manageUsers(interaction) {
 
 async function handleUserUpdate(interaction) {
     const ticket = db.getTicket(interaction.channelId);
-    if (!ticket) return interaction.update({ content: 'Could not find ticket data.', components: [] });
+    if (!ticket) return interaction.update({ embeds: [errorEmbed('Could not find ticket data.')], components: [] });
 
     const category = db.getCategory(ticket.categoryId);
     const staffRoles = JSON.parse(category?.roles || '[]');
@@ -185,8 +206,12 @@ async function handleUserUpdate(interaction) {
 
     await interaction.channel.permissionOverwrites.set(overwrites);
 
+    const successEmbed = new EmbedBuilder()
+        .setColor(COLORS.success)
+        .setDescription(`✅ **Updated ticket access for ${selectedUsers.length} user(s).**`);
+
     await interaction.followUp({
-        content: `✅ Updated ticket access for ${selectedUsers.length} user(s). ✨`,
+        embeds: [successEmbed],
         ephemeral: true,
     });
 }

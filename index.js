@@ -9,6 +9,7 @@ const { loadCommands }    = require('./handlers/commandHandler');
 const { handleButton, handleModal, handleSelectMenu, handleContextMenu } = require('./handlers/interactionRouter');
 const timerManager        = require('./utils/timerManager');
 const onMessageCreate     = require('./events/messageCreate');
+const { errorEmbed }      = require('./utils/embeds');
 
 // ─── Client Setup ─────────────────────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ client.on('interactionCreate', async interaction => {
         }
 
         const replyFn = interaction.replied || interaction.deferred ? 'followUp' : 'reply';
-        await interaction[replyFn]({ content: msg, ephemeral: true }).catch(() => {});
+        await interaction[replyFn]({ embeds: [errorEmbed(msg)], ephemeral: true }).catch(() => {});
     }
 });
 

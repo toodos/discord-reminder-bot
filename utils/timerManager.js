@@ -31,15 +31,17 @@ async function processExpiredCooldown(cd) {
         const mention = initiator ? `${user} and ${initiator}` : `${user}`;
         const { file, embed } = embeds.cooldownExpiredEmbed(mention);
 
-        // DM the target user
+        // DM the target user (Warm and Personal)
         try {
             const { file: dmFile, embed: dmEmbed } = embeds.cooldownExpiredEmbed('you');
-            dmEmbed.setTitle('🌸 Cooldown Expired! ✨')
-                   .setDescription(embeds.wrap('Yay! You can be assigned the task now! ✨🌸'));
+            dmEmbed.setTitle('✨ Rise and Shine!')
+                   .setDescription('Hey there! Just wanted to let you know your cooldown is over. You\'re wide awake and ready for your next task! 🌸');
             await user.send({ embeds: [dmEmbed], files: [dmFile] });
         } catch { /* DMs may be closed */ }
 
-        // Ping in channel
+        // Ping in channel (Celebratory)
+        embed.setTitle('🎊 Cooldown Over!')
+             .setDescription(`Great news! ${user} is back in action and ready for assignments! 🥳✨`);
         await channel.send({ content: `${mention}`, embeds: [embed], files: [file] });
     } catch (err) {
         console.error(`[Cooldown] Error processing for ${cd.userId}:`, err.message);
@@ -62,6 +64,10 @@ async function processExpiredReminder(reminder) {
 
         const initiatorTag = initiator ? initiator.tag : 'someone';
         const { file, embed } = embeds.reminderFiredEmbed(reminder.message, initiatorTag);
+
+        // Urgent but friendly
+        embed.setTitle('👋 Hey! Just a quick reminder...')
+             .setDescription(`### 🔔 ${reminder.message}\n\nDon't forget to take care of this! ✨`);
 
         // DM
         try { await targetUser.send({ embeds: [embed], files: [file] }); } catch { /* DMs may be closed */ }

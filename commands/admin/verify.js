@@ -1,7 +1,8 @@
 /**
  * commands/admin/verify.js
  */
-const { PermissionFlagsBits } = require('discord.js');
+const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { errorEmbed, COLORS } = require('../../utils/embeds');
 
 const REDDIT_REGEX = /(?:[a-z0-9-]+\.)?(?:reddit\.com|redd\.it)\/(?:r\/[^\/]+\/)?(?:comments\/[^\/]+(?:\/[^\/]+\/[a-z0-9]+)?|s\/[a-z0-9]+)/i;
 const LOADING_EMOJI = '1481725057024917715';
@@ -11,7 +12,7 @@ module.exports = {
     name: 'verify',
     async execute(interaction) {
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-            return interaction.reply({ content: 'Only Administrators can verify links! 🎀', ephemeral: true });
+            return interaction.reply({ embeds: [errorEmbed('Only Administrators can verify links!')], ephemeral: true });
         }
 
         const link = interaction.options.getString('link');
@@ -21,7 +22,7 @@ module.exports = {
             const msgId = link.match(/\d+$/)?.[0] || link;
             targetMessage = await interaction.channel.messages.fetch(msgId).catch(() => null);
             if (!targetMessage) {
-                return interaction.reply({ content: "I couldn't find that message! 🍭", ephemeral: true });
+                return interaction.reply({ embeds: [errorEmbed("I couldn't find that message!")], ephemeral: true });
             }
         } else {
             const messages = await interaction.channel.messages.fetch({ limit: 50 });
@@ -29,7 +30,7 @@ module.exports = {
         }
 
         if (!targetMessage) {
-            return interaction.reply({ content: "I couldn't find a recent Reddit link to verify! 🍭", ephemeral: true });
+            return interaction.reply({ embeds: [errorEmbed("I couldn't find a recent Reddit link to verify!")], ephemeral: true });
         }
 
         await verifyMessage(interaction, targetMessage);
@@ -49,7 +50,8 @@ async function verifyMessage(interaction, message) {
 
         const isReply = interaction.replied || interaction.deferred;
         const replyFn = isReply ? 'followUp' : 'reply';
-        await interaction[replyFn]({ content: '🎀 Link verified! ✨', ephemeral: true });
+        const embed = new EmbedBuilder().setColor(COLORS.success).setTitle('✅ Verified').setDescription('Link verified and sent to status check!');
+        await interaction[replyFn]({ embeds: [embed], ephemeral: true });
 
         const botReply = await message.reply('🎀 Sent to Client! ✨🌸🌷');
         setTimeout(() => botReply.delete().catch(() => {}), 5000);
@@ -57,6 +59,6 @@ async function verifyMessage(interaction, message) {
         console.error('[Verify] Error:', err.message);
         const isReply = interaction.replied || interaction.deferred;
         const replyFn = isReply ? 'followUp' : 'reply';
-        await interaction[replyFn]({ content: 'Something went wrong while verifying! ❓', ephemeral: true });
+        await interaction[replyFn]({ embeds: [errorEmbed('Something went wrong while verifying!')], ephemeral: true });
     }
 }

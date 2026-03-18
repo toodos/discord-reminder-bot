@@ -4,7 +4,7 @@
 const db = require('../../utils/database');
 const { parseTime } = require('../../utils/timer');
 const { scheduleCooldown } = require('../../utils/timerManager');
-const { cooldownSetEmbed } = require('../../utils/embeds');
+const { cooldownSetEmbed, errorEmbed } = require('../../utils/embeds');
 
 module.exports = {
     name: 'cd',
@@ -14,8 +14,9 @@ module.exports = {
 
         const existing = db.getCooldown(targetUser.id);
         if (existing) {
+            const unix = Math.floor(existing.endTime / 1000);
             return interaction.reply({
-                content: `${targetUser.tag} already has an active cooldown! It expires <t:${Math.floor(existing.endTime / 1000)}:R>. 🌙`,
+                embeds: [errorEmbed(`${targetUser.tag} already has an active cooldown!\nIt expires <t:${unix}:R>. 🌙`)],
                 ephemeral: true,
             });
         }
@@ -23,7 +24,7 @@ module.exports = {
         const duration = parseTime(timeStr);
         if (!duration) {
             return interaction.reply({
-                content: "I couldn't understand that time format. Try `24h`, `1d`, or `12h`. 🌸",
+                embeds: [errorEmbed("I couldn't understand that time format. Try `24h`, `1d`, or `12h`. 🌸")],
                 ephemeral: true,
             });
         }

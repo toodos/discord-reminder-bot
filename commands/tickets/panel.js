@@ -17,7 +17,7 @@ module.exports = {
 
             const categories = db.getCategories(interaction.guildId);
             if (categories.length === 0) {
-                return interaction.reply({ content: 'Create at least one category with `/category create` first!', ephemeral: true });
+                return interaction.reply({ embeds: [errorEmbed('Create at least one category with `/category create` first!')], ephemeral: true });
             }
 
             const embed = new EmbedBuilder()
@@ -35,7 +35,7 @@ module.exports = {
                         .setCustomId(`ticket_open_${categories[i].id}`)
                         .setLabel(categories[i].name)
                         .setEmoji(categories[i].emoji)
-                        .setStyle(ButtonStyle.Primary)
+                        .setStyle(ButtonStyle.Secondary)
                 );
             }
 

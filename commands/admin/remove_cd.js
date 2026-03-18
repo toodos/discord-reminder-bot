@@ -3,13 +3,13 @@
  */
 const { PermissionFlagsBits } = require('discord.js');
 const db = require('../../utils/database');
-const { cooldownRemovedEmbed } = require('../../utils/embeds');
+const { cooldownRemovedEmbed, errorEmbed } = require('../../utils/embeds');
 
 module.exports = {
     name: 'remove_cd',
     async execute(interaction) {
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-            return interaction.reply({ content: 'Only Administrators can wake people up early! 🎀', ephemeral: true });
+            return interaction.reply({ embeds: [errorEmbed('Only Administrators can wake people up early!')], ephemeral: true });
         }
 
         const targetUser = interaction.options.getUser('user');

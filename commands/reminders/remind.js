@@ -4,7 +4,7 @@
 const db = require('../../utils/database');
 const { parseTime } = require('../../utils/timer');
 const { scheduleReminder } = require('../../utils/timerManager');
-const { reminderSetEmbed } = require('../../utils/embeds');
+const { reminderSetEmbed, errorEmbed } = require('../../utils/embeds');
 
 module.exports = {
     name: 'remind',
@@ -17,7 +17,7 @@ module.exports = {
         const durationMs = parseTime(timeStr);
         if (!durationMs) {
             return interaction.reply({
-                content: "I couldn't understand that time format! Try something like `10m`, `2h`, or `1d`. 🌸",
+                embeds: [errorEmbed("I couldn't understand that time format! Try something like `10m`, `2h`, or `1d`. 🌸")],
                 ephemeral: true,
             });
         }
