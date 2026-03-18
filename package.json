@@ -1,17 +1,18 @@
 {
-  "name": "discord-bot",
-  "version": "1.0.0",
-  "description": "",
+  "name": "blossom-bot",
+  "version": "2.0.0",
+  "description": "A premium Discord bot with Economy, Ticket, and Reminder systems.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js",
+    "deploy": "node deploy-commands.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "better-sqlite3": "^11.8.1",
+    "better-sqlite3": "^12.8.0",
     "discord-html-transcripts": "^3.2.0",
     "discord.js": "^14.25.1",
     "dotenv": "^17.3.1"

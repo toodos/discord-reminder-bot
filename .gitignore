@@ -1,4 +1,4 @@
-node_modules
+node_modules/
 .env
-data/database.json
-package-lock.json
+data/
+*.db
