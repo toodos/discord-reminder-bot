@@ -1,24 +1,42 @@
 /**
- * Parses a time string (e.g., "10m", "1h") into milliseconds.
- * @param {string} timeStr - The time string to parse.
- * @returns {number|null} - The duration in milliseconds, or null if invalid.
+ * utils/timer.js
+ * Parses human-readable time strings into milliseconds.
+ * Supports: 30s, 10m, 2h, 1d, and combined units like 1h30m
  */
 function parseTime(timeStr) {
-    const timeRegex = /^(\d+)([smhd])$/;
-    const matches = timeStr.match(timeRegex);
+    if (!timeStr || typeof timeStr !== 'string') return null;
 
-    if (!matches) return null;
+    // Combined units e.g. "1h30m", "2d12h"
+    const combinedRegex = /(\d+)([smhd])/g;
+    const units = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 };
 
-    const value = parseInt(matches[1]);
-    const unit = matches[2];
+    let total = 0;
+    let matched = false;
 
-    switch (unit) {
-        case 's': return value * 1000;
-        case 'm': return value * 60 * 1000;
-        case 'h': return value * 60 * 60 * 1000;
-        case 'd': return value * 24 * 60 * 60 * 1000;
-        default: return null;
+    for (const [, value, unit] of timeStr.matchAll(combinedRegex)) {
+        total += parseInt(value) * units[unit];
+        matched = true;
     }
+
+    return matched ? total : null;
 }
 
-module.exports = { parseTime };
+/**
+ * Formats milliseconds into a human-readable string.
+ * e.g. 3661000 → "1h 1m 1s"
+ */
+function formatDuration(ms) {
+    const s = Math.floor(ms / 1000) % 60;
+    const m = Math.floor(ms / 60_000) % 60;
+    const h = Math.floor(ms / 3_600_000) % 24;
+    const d = Math.floor(ms / 86_400_000);
+
+    return [
+        d && `${d}d`,
+        h && `${h}h`,
+        m && `${m}m`,
+        (!d && !h && s) && `${s}s`,
+    ].filter(Boolean).join(' ') || '0s';
+}
+
+module.exports = { parseTime, formatDuration };
