@@ -153,7 +153,7 @@ const commands = [
             {
                 name: 'delete', description: 'Delete a ticket category 🗑️', type: 1,
                 options: [
-                    { name: 'id', description: 'Category ID (from /category list)', type: 3, required: true },
+                    { name: 'id', description: 'Category ID (from /category list)', type: 3, required: true, autocomplete: true },
                 ],
             },
         ],
