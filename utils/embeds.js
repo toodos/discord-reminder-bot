@@ -42,6 +42,14 @@ function errorEmbed(content) {
         .setDescription(content);
 }
 
+function getTier(balance) {
+    if (balance >= 100000) return '💎';
+    if (balance >= 50000)  return '👑';
+    if (balance >= 10000)  return '💳';
+    if (balance >= 1000)   return '💵';
+    return '🪨';
+}
+
 // ─── Reminder Embeds ──────────────────────────────────────────────────────────
 
 function reminderSetEmbed(targetUser, message, timeStr, targetChannel) {
@@ -128,24 +136,38 @@ function balanceEmbed(client, targetUser, balance, rank, leaderboardStr, totalEc
 }
 
 function addMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
+    const tier = getTier(newBalance);
+    const oldTier = getTier(oldBalance);
+    const tierDisplay = oldTier === tier ? tier : `${oldTier} → ${tier}`;
+
     return {
         file: asset('money.png'),
         embed: base(COLORS.success)
             .setTitle('💰 Transaction: Deposit')
             .setThumbnail('attachment://money.png')
             .setDescription(`Successfully added **₹${amount.toLocaleString()}** to ${targetUser}'s vault.`)
-            .addFields({ name: '🧾 Balance Update', value: `\`₹${oldBalance.toLocaleString()}\` → **₹${newBalance.toLocaleString()}**` }),
+            .addFields(
+                { name: '💰 Balance Update', value: `\`₹${oldBalance.toLocaleString()}\` → **₹${newBalance.toLocaleString()}**`, inline: true },
+                { name: '📈 Wealth Tier', value: `\`${tierDisplay}\``, inline: true }
+            ),
     };
 }
 
 function removeMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
+    const tier = getTier(newBalance);
+    const oldTier = getTier(oldBalance);
+    const tierDisplay = oldTier === tier ? tier : `${oldTier} → ${tier}`;
+
     return {
         file: asset('money.png'),
         embed: base(COLORS.danger)
             .setTitle('💸 Transaction: Withdrawal')
             .setThumbnail('attachment://money.png')
             .setDescription(`Successfully removed **₹${amount.toLocaleString()}** from ${targetUser}'s vault.`)
-            .addFields({ name: '🧾 Balance Update', value: `\`₹${oldBalance.toLocaleString()}\` → **₹${newBalance.toLocaleString()}**` }),
+            .addFields(
+                { name: '📈 Balance Update', value: `\`₹${oldBalance.toLocaleString()}\` → **₹${newBalance.toLocaleString()}**`, inline: true },
+                { name: '📉 Wealth Tier', value: `\`${tierDisplay}\``, inline: true }
+            ),
     };
 }
 
