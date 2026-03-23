@@ -15,7 +15,7 @@ async function processExpiredCooldown(cd) {
     if (!db.getCooldown(cd.userId)) return;
 
     try {
-        const user    = await _client.users.fetch(cd.userId).catch(() => null);
+        const user = await _client.users.fetch(cd.userId).catch(() => null);
         const channel = await _client.channels.fetch(cd.channelId).catch(() => null);
 
         // Always clean up regardless of fetch success
@@ -35,13 +35,13 @@ async function processExpiredCooldown(cd) {
         try {
             const { file: dmFile, embed: dmEmbed } = embeds.cooldownExpiredEmbed('you');
             dmEmbed.setTitle('✨ Rise and Shine!')
-                   .setDescription('Hey there! Just wanted to let you know your cooldown is over. You\'re wide awake and ready for your next task! 🌸');
+                .setDescription('Hey there! Just wanted to let you know your cooldown is over. You\'re wide awake and ready for your next task! 🌸');
             await user.send({ embeds: [dmEmbed], files: [dmFile] });
         } catch { /* DMs may be closed */ }
 
         // Ping in channel (Celebratory)
         embed.setTitle('🎊 Cooldown Over!')
-             .setDescription(`Great news! ${user} is back in action and ready for assignments! 🥳✨`);
+            .setDescription(`Great news! ${user} is back in action and ready for assignments! 🥳✨`);
         await channel.send({ content: `${mention}`, embeds: [embed], files: [file] });
     } catch (err) {
         console.error(`[Cooldown] Error processing for ${cd.userId}:`, err.message);
@@ -54,9 +54,9 @@ async function processExpiredReminder(reminder) {
     if (!db.reminderExists(reminder.id)) return;
 
     try {
-        const targetUser    = await _client.users.fetch(reminder.userId).catch(() => null);
+        const targetUser = await _client.users.fetch(reminder.userId).catch(() => null);
         const targetChannel = await _client.channels.fetch(reminder.channelId).catch(() => null);
-        const initiator     = await _client.users.fetch(reminder.initiatorId).catch(() => null);
+        const initiator = await _client.users.fetch(reminder.initiatorId).catch(() => null);
 
         db.removeReminder(reminder.id);
 
@@ -67,7 +67,7 @@ async function processExpiredReminder(reminder) {
 
         // Urgent but friendly
         embed.setTitle('👋 Hey! Just a quick reminder...')
-             .setDescription(`### 🔔 ${reminder.message}\n\nDon't forget to take care of this! ✨`);
+            .setDescription(`### 🔔 ${reminder.message}\n\nDon't forget to take care of this! ✨`);
 
         // DM
         try { await targetUser.send({ embeds: [embed], files: [file] }); } catch { /* DMs may be closed */ }
