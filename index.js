@@ -58,6 +58,10 @@ client.on('interactionCreate', async interaction => {
 
         } else if (interaction.isUserSelectMenu()) {
             await handleSelectMenu(interaction);
+        } else if (interaction.isAutocomplete()) {
+            const command = commands.get(interaction.commandName);
+            if (!command || !command.autocomplete) return;
+            await command.autocomplete(interaction);
         }
 
     } catch (error) {
