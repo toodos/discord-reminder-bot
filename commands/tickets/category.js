@@ -45,4 +45,18 @@ module.exports = {
             await interaction.reply({ content: `✅ Deleted the **${category.name}** category! 🗑️✨`, ephemeral: true });
         }
     },
+
+    async autocomplete(interaction) {
+        const focusedValue = interaction.options.getFocused();
+        const categories = db.getCategories(interaction.guildId);
+
+        const filtered = categories.filter(c => 
+            c.name.toLowerCase().includes(focusedValue.toLowerCase()) || 
+            c.id.toLowerCase().includes(focusedValue.toLowerCase())
+        );
+
+        await interaction.respond(
+            filtered.slice(0, 25).map(c => ({ name: `${c.emoji} ${c.name}`, value: c.id }))
+        );
+    },
 };
