@@ -3,7 +3,7 @@
  * Routes non-command interactions (buttons, modals, select menus) to their handlers.
  */
 const { PermissionFlagsBits, ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const db          = require('../utils/database');
+const db = require('../utils/database');
 const ticketLogic = require('../utils/ticketLogic');
 const { verifyMessage, REDDIT_REGEX, LOADING_EMOJI, CHECK_EMOJI } = require('../commands/admin/verify');
 
@@ -13,18 +13,18 @@ async function handleButton(interaction) {
     // ── Ticket Panel Open ──────────────────────────────────────────────────────
     if (customId.startsWith('ticket_open_')) {
         const categoryId = customId.replace('ticket_open_', '');
-        const category   = db.getCategory(categoryId);
+        const category = db.getCategory(categoryId);
         if (!category) return interaction.reply({ content: 'Invalid category!', ephemeral: true });
 
         if (db.isBlacklisted(interaction.guildId, interaction.user.id)) {
             return interaction.reply({ content: 'You are blacklisted from opening tickets.', ephemeral: true });
         }
 
-        const config      = db.getGuildConfig(interaction.guildId);
-        const staffRoles  = JSON.parse(category.roles || '[]');
-        const isAdmin     = interaction.member.permissions.has(PermissionFlagsBits.Administrator) ||
-                            (config.adminRoleId && interaction.member.roles.cache.has(config.adminRoleId));
-        const isSupport   = staffRoles.some(r => interaction.member.roles.cache.has(r));
+        const config = db.getGuildConfig(interaction.guildId);
+        const staffRoles = JSON.parse(category.roles || '[]');
+        const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator) ||
+            (config.adminRoleId && interaction.member.roles.cache.has(config.adminRoleId));
+        const isSupport = staffRoles.some(r => interaction.member.roles.cache.has(r));
 
         const active = db.getUserActiveTickets(interaction.user.id, interaction.guildId);
         if (active.length >= category.maxTickets && !isAdmin && !isSupport) {
@@ -78,11 +78,11 @@ async function handleModal(interaction) {
 
     if (customId.startsWith('ticket_modal_')) {
         const categoryId = customId.replace('ticket_modal_', '');
-        const category   = db.getCategory(categoryId);
+        const category = db.getCategory(categoryId);
         if (!category) return interaction.reply({ content: 'Category not found.', ephemeral: true });
 
         const questions = JSON.parse(category.questions || '[]');
-        const answers   = Object.fromEntries(
+        const answers = Object.fromEntries(
             questions.map((q, i) => [q.label, interaction.fields.getTextInputValue(`question_${i}`)])
         );
 
