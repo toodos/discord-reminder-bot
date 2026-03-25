@@ -28,7 +28,10 @@ module.exports = {
             }
 
             const response = await fetch(url, fetchOptions);
-            if (!response.ok) throw new Error('Failed to fetch image');
+            if (!response.ok) {
+                const errText = await response.text().catch(() => 'No text');
+                throw new Error(`Failed to fetch image (${response.status} ${response.statusText}): ${errText}`);
+            }
 
             const buffer = await response.arrayBuffer();
             const attachment = new AttachmentBuilder(Buffer.from(buffer), { name: 'imagine.jpeg' });
