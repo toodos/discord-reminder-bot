@@ -8,6 +8,7 @@ const { Client, GatewayIntentBits, Partials, ActivityType, PermissionFlagsBits }
 const { loadCommands }    = require('./handlers/commandHandler');
 const { handleButton, handleModal, handleSelectMenu, handleContextMenu } = require('./handlers/interactionRouter');
 const timerManager        = require('./utils/timerManager');
+const statuses            = require('./utils/statuses');
 const onMessageCreate     = require('./events/messageCreate');
 const { errorEmbed }      = require('./utils/embeds');
 
@@ -30,10 +31,18 @@ const commands = loadCommands();
 client.once('ready', () => {
     console.log(`[Bot] Logged in as ${client.user.tag}`);
 
-    client.user.setPresence({
-        activities: [{ name: 'Baking strawberry cupcakes 🍓🧁', type: ActivityType.Custom }],
-        status: 'dnd',
-    });
+    let statusIndex = 0;
+
+    const setNextStatus = () => {
+        client.user.setPresence({
+            activities: [{ name: statuses[statusIndex], type: ActivityType.Custom }],
+            status: 'dnd',
+        });
+        statusIndex = (statusIndex + 1) % statuses.length;
+    };
+
+    setNextStatus(); // Set immediately on ready
+    setInterval(setNextStatus, 20000); // And update every 20 seconds
 
     timerManager.init(client);
 });
