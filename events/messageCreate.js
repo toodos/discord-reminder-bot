@@ -37,7 +37,7 @@ module.exports = async function onMessageCreate(message) {
             await message.channel.sendTyping();
             const completion = await groqClient.chat.completions.create({
                 messages: [
-                    { role: 'system', content: 'You are a helpful and friendly Discord chatbot named Blossom-bot. Keep your answers concise to fit within Discord message limits.' },
+                    { role: 'system', content: 'You are a helpful and friendly Discord chatbot named Oakawol Bot. Keep your answers concise to fit within Discord message limits.' },
                     { role: 'user', content: prompt }
                 ],
                 model: 'llama-3.1-8b-instant',
