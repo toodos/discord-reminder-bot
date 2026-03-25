@@ -40,7 +40,7 @@ module.exports = async function onMessageCreate(message) {
                     { role: 'system', content: 'You are a helpful and friendly Discord chatbot named Blossom-bot. Keep your answers concise to fit within Discord message limits.' },
                     { role: 'user', content: prompt }
                 ],
-                model: 'llama3-8b-8192',
+                model: 'llama-3.1-8b-instant',
             });
             let reply = completion.choices[0]?.message?.content || "I'm not exactly sure what to say! 💦";
             
