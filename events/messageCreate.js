@@ -15,6 +15,7 @@ if (process.env.GROQ_API_KEY) {
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
 const GROQ_MODELS = [
+    'moonshotai/kimi-k2-instruct-0905',
     'llama-3.1-8b-instant',
     'mixtral-8x7b-32768',
     'llama-3.3-70b-versatile'
