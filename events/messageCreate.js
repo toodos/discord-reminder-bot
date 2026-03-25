@@ -14,11 +14,19 @@ if (process.env.GROQ_API_KEY) {
 
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
-module.exports = async function onMessageCreate(message) {
-    if (message.author.bot || !message.guild) return;
+const GROQ_MODELS = [
+    'llama-3.1-8b-instant',
+    'mixtral-8x7b-32768',
+    'llama-3.3-70b-versatile'
+];
 
-    // Check if the bot is mentioned
-    if (message.mentions.has(message.client.user)) {
+module.exports = async function onMessageCreate(message) {
+    if (message.author.bot) return;
+
+    const isDM = !message.guild;
+    const isChatRequest = isDM || message.mentions.has(message.client.user);
+
+    if (isChatRequest) {
         if (!groqClient) {
             if (process.env.GROQ_API_KEY) {
                 groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -35,24 +43,39 @@ module.exports = async function onMessageCreate(message) {
 
         try {
             await message.channel.sendTyping();
-            const completion = await groqClient.chat.completions.create({
-                messages: [
-                    { role: 'system', content: 'You are a helpful and friendly Discord chatbot named Oakawol Bot. Keep your answers concise to fit within Discord message limits.' },
-                    { role: 'user', content: prompt }
-                ],
-                model: 'llama-3.1-8b-instant',
-            });
-            let reply = completion.choices[0]?.message?.content || "I'm not exactly sure what to say! 💦";
-            
+            let reply = null;
+
+            for (const model of GROQ_MODELS) {
+                try {
+                    const completion = await groqClient.chat.completions.create({
+                        messages: [
+                            { role: 'system', content: 'You are a helpful and friendly Discord chatbot named Oakawol Bot. Keep your answers concise to fit within Discord message limits.' },
+                            { role: 'user', content: prompt }
+                        ],
+                        model: model,
+                    });
+                    reply = completion.choices[0]?.message?.content;
+                    if (reply) break;
+                } catch (apiError) {
+                    console.error(`[Groq Error] Model ${model} failed:`, apiError.message);
+                }
+            }
+
+            if (!reply) {
+                return message.reply("Oops, all my AI models are currently down! Please try again later. 🧊").catch(() => {});
+            }
+
             if (reply.length > 2000) {
                 reply = reply.substring(0, 1997) + '...';
             }
             return message.reply(reply).catch(() => {});
         } catch (error) {
-            console.error('[Groq Error]', error);
-            return message.reply("Oops, I encountered an error while thinking! 🧊").catch(() => {});
+            console.error('[Groq Unexpected Error]', error);
+            return message.reply("Oops, I encountered an unexpected error while thinking! 🧊").catch(() => {});
         }
     }
+
+    if (isDM) return;
 
     const ticket = db.getTicket(message.channel.id);
     if (!ticket) return;
