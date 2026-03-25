@@ -18,16 +18,13 @@ module.exports = {
 
         try {
             // Pollinations.ai generates images strictly via URL. We fetch it as an ArrayBuffer to send as attachment.
-            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true`;
+            let url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true`;
             
-            const fetchOptions = {};
-            if (process.env.POLLINATIONS_API_KEY) {
-                fetchOptions.headers = {
-                    'Authorization': `Bearer ${process.env.POLLINATIONS_API_KEY}`
-                };
+            if (process.env.POLLINATIONS_API_KEY && !process.env.POLLINATIONS_API_KEY.includes('your_')) {
+                url += `&key=${encodeURIComponent(process.env.POLLINATIONS_API_KEY.trim())}`;
             }
 
-            const response = await fetch(url, fetchOptions);
+            const response = await fetch(url);
             if (!response.ok) {
                 const errText = await response.text().catch(() => 'No text');
                 throw new Error(`Failed to fetch image (${response.status} ${response.statusText}): ${errText}`);
