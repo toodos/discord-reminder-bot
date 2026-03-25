@@ -24,6 +24,74 @@ const GROQ_MODELS = [
 module.exports = async function onMessageCreate(message) {
     if (message.author.bot) return;
 
+    // ----- PREFIX COMMAND HANDLER -----
+    const prefix = '!';
+    if (message.content.startsWith(prefix)) {
+        const args = message.content.slice(prefix.length).trim().split(/ +/);
+        const commandName = args.shift().toLowerCase();
+
+        const command = message.client.commands?.get(commandName);
+        if (command) {
+            const mockInteraction = {
+                client: message.client,
+                user: message.author,
+                member: message.member,
+                guild: message.guild,
+                channel: message.channel,
+                commandName: commandName,
+                isChatInputCommand: () => true,
+                deferReply: async () => { await message.channel.sendTyping(); },
+                reply: async (data) => { 
+                    if (typeof data === 'string') return message.reply(data);
+                    return message.reply(data); 
+                },
+                editReply: async (data) => message.channel.send(data),
+                followUp: async (data) => message.channel.send(data),
+                options: {
+                    getString: (name) => {
+                        if (['prompt', 'message', 'description', 'title'].includes(name)) {
+                            const res = args.join(' ');
+                            args.length = 0;
+                            return res || null;
+                        }
+                        return args.shift() || null;
+                    },
+                    getUser: (name) => {
+                        if (!args[0]) return null;
+                        const match = args[0].match(/<@!?(\d+)>/);
+                        if (match) {
+                            args.shift();
+                            return message.client.users.cache.get(match[1]) || null;
+                        }
+                        return null;
+                    },
+                    getChannel: (name) => {
+                        if (!args[0]) return null;
+                        const match = args[0].match(/<#(\d+)>/);
+                        if (match) {
+                            args.shift();
+                            return message.guild?.channels.cache.get(match[1]) || null;
+                        }
+                        return null;
+                    },
+                    getRole: () => null,
+                    getInteger: () => parseInt(args.shift()) || null,
+                    getNumber: () => parseFloat(args.shift()) || null,
+                    getBoolean: () => null,
+                }
+            };
+
+            try {
+                await command.execute(mockInteraction);
+                return;
+            } catch (error) {
+                console.error(`[Prefix Error] Error executing ${commandName}:`, error);
+                message.reply('Oops! There was an error executing that command. 🧊').catch(() => {});
+                return;
+            }
+        }
+    }
+
     const isDM = !message.guild;
     const isChatRequest = isDM || message.mentions.has(message.client.user);
 

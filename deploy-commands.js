@@ -102,6 +102,15 @@ const commands = [
         ],
     },
 
+    // ── Fun ────────────────────────────────────────────────────────────────────
+    {
+        name: 'imagine',
+        description: 'Generate a beautiful image from a prompt 🎨✨',
+        options: [
+            { name: 'prompt', description: 'What do you want to imagine? 🌸', type: 3, required: true },
+        ],
+    },
+
     // ── Context Menus ──────────────────────────────────────────────────────────
     {
         name: 'Verify Link',

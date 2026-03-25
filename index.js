@@ -25,6 +25,7 @@ const client = new Client({
 });
 
 const commands = loadCommands();
+client.commands = commands;
 
 // ─── Ready ────────────────────────────────────────────────────────────────────
 
