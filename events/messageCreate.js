@@ -78,13 +78,15 @@ module.exports = async function onMessageCreate(message) {
                     },
                     getRole: () => null,
                     getInteger: () => {
-                        const val = args.find(a => a && !isNaN(a) && !a.startsWith('<') && !/^\d{17,20}$/.test(a));
-                        if (val) { args.splice(args.indexOf(val), 1); return parseInt(val); }
+                        const vals = args.join(' ').match(/-?\b\d+(?:\.\d+)?\b/g) || [];
+                        const val = vals.find(v => !/^\d{17,20}$/.test(v));
+                        if (val) { args = args.filter(a => !a.includes(val)); return parseInt(val); }
                         return null;
                     },
                     getNumber: () => {
-                        const val = args.find(a => a && !isNaN(a) && !a.startsWith('<') && !/^\d{17,20}$/.test(a));
-                        if (val) { args.splice(args.indexOf(val), 1); return parseFloat(val); }
+                        const vals = args.join(' ').match(/-?\b\d+(?:\.\d+)?\b/g) || [];
+                        const val = vals.find(v => !/^\d{17,20}$/.test(v));
+                        if (val) { args = args.filter(a => !a.includes(val)); return parseFloat(val); }
                         return null;
                     },
                     getBoolean: () => null,
@@ -207,13 +209,15 @@ module.exports = async function onMessageCreate(message) {
                                             getChannel: () => null,
                                             getRole: () => null,
                                             getInteger: () => {
-                                                const val = mockArgs.find(a => a && !isNaN(a) && !a.startsWith('<') && !/^\d{17,20}$/.test(a));
-                                                if (val) { mockArgs.splice(mockArgs.indexOf(val), 1); return parseInt(val); }
+                                                const vals = (argsObj.args || '').match(/-?\b\d+(?:\.\d+)?\b/g) || [];
+                                                const val = vals.find(v => !/^\d{17,20}$/.test(v));
+                                                if (val) { argsObj.args = argsObj.args.replace(val, ''); return parseInt(val); }
                                                 return null;
                                             },
                                             getNumber: () => {
-                                                const val = mockArgs.find(a => a && !isNaN(a) && !a.startsWith('<') && !/^\d{17,20}$/.test(a));
-                                                if (val) { mockArgs.splice(mockArgs.indexOf(val), 1); return parseFloat(val); }
+                                                const vals = (argsObj.args || '').match(/-?\b\d+(?:\.\d+)?\b/g) || [];
+                                                const val = vals.find(v => !/^\d{17,20}$/.test(v));
+                                                if (val) { argsObj.args = argsObj.args.replace(val, ''); return parseFloat(val); }
                                                 return null;
                                             },
                                             getBoolean: () => null,
