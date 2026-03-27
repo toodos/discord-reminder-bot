@@ -2,10 +2,11 @@
  * events/messageCreate.js
  * Handles link detection inside ticket channels.
  */
-const { PermissionFlagsBits } = require('discord.js');
+const { PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const db = require('../utils/database');
 const { REDDIT_REGEX, LOADING_EMOJI } = require('../commands/admin/verify');
 const Groq = require('groq-sdk');
+const { aiToolDefinitions, executeTool } = require('../utils/aiTools');
 
 let groqClient = null;
 if (process.env.GROQ_API_KEY) {
@@ -114,17 +115,34 @@ module.exports = async function onMessageCreate(message) {
             await message.channel.sendTyping();
             let reply = null;
 
+            const tools = aiToolDefinitions;
+
             for (const model of GROQ_MODELS) {
                 try {
                     const completion = await groqClient.chat.completions.create({
                         messages: [
-                            { role: 'system', content: 'You are a helpful and friendly Discord chatbot named Oakawol Bot. Keep your answers concise to fit within Discord message limits.' },
+                            { role: 'system', content: 'You are a helpful, powerful Discord chatbot named Oakawol Bot. You have massive tools you can execute on behalf of the admin or user. Note: for IDs, users will tag people, which look like <@123456789>, you must extract the 123456789 part to use as userId. Answer concisely.' },
                             { role: 'user', content: prompt }
                         ],
                         model: model,
+                        tools: tools,
+                        tool_choice: 'auto'
                     });
-                    reply = completion.choices[0]?.message?.content;
-                    if (reply) break;
+                    
+                    const responseMessage = completion.choices[0]?.message;
+                    
+                    if (responseMessage?.tool_calls) {
+                        for (const toolCall of responseMessage.tool_calls) {
+                            const args = JSON.parse(toolCall.function.arguments);
+                            const tName = toolCall.function.name;
+                            
+                            reply = await executeTool(tName, args, message);
+                        }
+                        if (reply) break;
+                    } else if (responseMessage?.content) {
+                        reply = responseMessage.content;
+                        if (reply) break;
+                    }
                 } catch (apiError) {
                     console.error(`[Groq Error] Model ${model} failed:`, apiError.message);
                 }
