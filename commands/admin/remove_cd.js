@@ -7,6 +7,7 @@ const { cooldownRemovedEmbed, errorEmbed } = require('../../utils/embeds');
 
 module.exports = {
     name: 'remove_cd',
+    description: 'Remove/Reset an active cooldown from a user prematurely.',
     async execute(interaction) {
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
             return interaction.reply({ embeds: [errorEmbed('Only Administrators can wake people up early!')], ephemeral: true });

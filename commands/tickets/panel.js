@@ -7,6 +7,7 @@ const { COLORS } = require('../../utils/embeds');
 
 module.exports = {
     name: 'panel',
+    description: 'Send the ticket creation panel to the current channel.',
     async execute(interaction) {
         const sub = interaction.options.getSubcommand();
 

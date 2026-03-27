@@ -8,6 +8,7 @@ const { reminderSetEmbed, errorEmbed } = require('../../utils/embeds');
 
 module.exports = {
     name: 'remind',
+    description: 'Set a personal reminder to be pinged later.',
     async execute(interaction) {
         const timeStr       = interaction.options.getString('time');
         const message       = interaction.options.getString('message');

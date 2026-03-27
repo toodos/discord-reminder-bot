@@ -8,6 +8,7 @@ const { cooldownSetEmbed, errorEmbed } = require('../../utils/embeds');
 
 module.exports = {
     name: 'cd',
+    description: 'Set a cooldown timer for a user, restricting them from doing actions until the cooldown expires.',
     async execute(interaction) {
         const targetUser = interaction.options.getUser('user');
         const timeStr    = interaction.options.getString('time') || '24h';

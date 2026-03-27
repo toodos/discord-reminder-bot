@@ -7,6 +7,7 @@ const { removeMoneyEmbed, errorEmbed } = require('../../utils/embeds');
 
 module.exports = {
     name: 'remove_money',
+    description: 'Administratively remove coins/money from a user\'s balance.',
     async execute(interaction) {
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
             return interaction.reply({ embeds: [errorEmbed('Only Administrators can remove money!')], ephemeral: true });

@@ -10,6 +10,7 @@ const CHECK_EMOJI   = '1481725300349079673';
 
 module.exports = {
     name: 'verify',
+    description: 'Verify a URL/Link manually so it stops being flagged by the ticket auto-moderator.',
     async execute(interaction) {
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
             return interaction.reply({ embeds: [errorEmbed('Only Administrators can verify links!')], ephemeral: true });

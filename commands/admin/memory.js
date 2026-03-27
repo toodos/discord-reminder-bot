@@ -7,6 +7,7 @@ const { memoryListEmbed, errorEmbed } = require('../../utils/embeds');
 
 module.exports = {
     name: 'memory',
+    description: 'View the bot\'s current memory usage and process stats.',
     async execute(interaction) {
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
             return interaction.reply({ embeds: [errorEmbed('Only Administrators can manage bot memory!')], ephemeral: true });

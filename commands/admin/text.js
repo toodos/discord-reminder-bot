@@ -6,6 +6,7 @@ const { errorEmbed } = require('../../utils/embeds');
 
 module.exports = {
     name: 'text',
+    description: 'Send a pure text message or reply through the bot anonymously.',
     async execute(interaction) {
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
             return interaction.reply({ embeds: [errorEmbed('Only Administrators can use this command!')], ephemeral: true });

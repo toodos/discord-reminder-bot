@@ -7,6 +7,7 @@ const { categoryListEmbed, errorEmbed, COLORS } = require('../../utils/embeds');
 
 module.exports = {
     name: 'category',
+    description: 'Manage ticket categories (add/remove categories for users).',
     async execute(interaction) {
         const sub = interaction.options.getSubcommand();
 

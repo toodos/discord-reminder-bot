@@ -7,6 +7,7 @@ const { addMoneyEmbed, errorEmbed } = require('../../utils/embeds');
 
 module.exports = {
     name: 'add_money',
+    description: 'Administratively add coins/money to a user\'s balance.',
     async execute(interaction) {
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
             return interaction.reply({ embeds: [errorEmbed('Only Administrators can add money!')], ephemeral: true });

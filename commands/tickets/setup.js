@@ -7,6 +7,7 @@ const { errorEmbed, COLORS } = require('../../utils/embeds');
 
 module.exports = {
     name: 'setup',
+    description: 'Set up the ticketing system panel in a channel.',
     async execute(interaction) {
         const adminRole          = interaction.options.getRole('admin_role');
         const logChannel         = interaction.options.getChannel('log_channel');

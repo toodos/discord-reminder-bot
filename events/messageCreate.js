@@ -200,7 +200,24 @@ module.exports = async function onMessageCreate(message) {
                                             return message.channel.send(data);
                                         },
                                         options: {
-                                            getString: () => argsObj.args || null,
+                                            getString: (name) => {
+                                                if (name === 'time') {
+                                                    const match = (argsObj.args || '').match(/\b(?:\d+[smhd])+\b/i);
+                                                    if (match) {
+                                                        argsObj.args = argsObj.args.replace(match[0], '').trim();
+                                                        return match[0];
+                                                    }
+                                                }
+                                                if (['prompt', 'message', 'description', 'title'].includes(name)) {
+                                                    const res = argsObj.args;
+                                                    argsObj.args = '';
+                                                    return res || null;
+                                                }
+                                                const argArr = argsObj.args ? argsObj.args.split(' ') : [];
+                                                const res = argArr.shift();
+                                                argsObj.args = argArr.join(' ');
+                                                return res || null;
+                                            },
                                             getUser: () => {
                                                 const matches = [...(argsObj.args || '').matchAll(/(?:<@!?)?(\d{17,20})>?/g)];
                                                 for (const match of matches) {
