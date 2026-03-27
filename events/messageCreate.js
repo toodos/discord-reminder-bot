@@ -60,7 +60,7 @@ module.exports = async function onMessageCreate(message) {
                     },
                     getUser: (name) => {
                         if (!args[0]) return null;
-                        const match = args[0].match(/<@!?(\d+)>/);
+                        const match = args[0].match(/(?:<@!?)?(\d{17,20})>?/);
                         if (match) {
                             args.shift();
                             return message.client.users.cache.get(match[1]) || null;
@@ -201,7 +201,7 @@ module.exports = async function onMessageCreate(message) {
                                         options: {
                                             getString: () => argsObj.args || null,
                                             getUser: () => {
-                                                const match = (argsObj.args || '').match(/<@!?(\d+)>/);
+                                                const match = (argsObj.args || '').match(/(?:<@!?)?(\d{17,20})>?/);
                                                 return match ? message.client.users.cache.get(match[1]) || null : null;
                                             },
                                             getChannel: () => null,
