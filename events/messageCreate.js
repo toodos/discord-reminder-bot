@@ -104,7 +104,26 @@ module.exports = async function onMessageCreate(message) {
     }
 
     const isDM = !message.guild;
-    const isChatRequest = isDM || message.mentions.has(message.client.user);
+    const isChatRequest = true; // Read ALL messages automatically
+
+    // ----- TICKET LINK CHECKER (Moved up so it runs instantly) -----
+    if (!isDM) {
+        const ticket = db.getTicket(message.channel.id);
+        if (ticket) {
+            const config  = db.getGuildConfig(message.guild.id);
+            const isAdmin = message.member.permissions.has(PermissionFlagsBits.Administrator) ||
+                            (config.adminRoleId && message.member.roles.cache.has(config.adminRoleId));
+            if (!isAdmin) {
+                const urlMatch = message.content.match(URL_REGEX);
+                if (urlMatch) {
+                    try {
+                        if (REDDIT_REGEX.test(urlMatch[0])) await message.react(LOADING_EMOJI);
+                        else await message.react('✅');
+                    } catch (err) { }
+                }
+            }
+        }
+    }
 
     if (isChatRequest) {
         if (!groqClient) {
@@ -148,7 +167,7 @@ module.exports = async function onMessageCreate(message) {
             for (const model of GROQ_MODELS) {
                 try {
                     const messages = [
-                        { role: 'system', content: 'You are a helpful, powerful Discord chatbot named Oakawol Bot. You have massive tools. Note: for IDs, users will tag people, which look like <@123456789>, you must extract the 123456789 part to use as userId. If a tool fails to find what the user asked for (e.g. dictionary or web search fails), you MUST use your own internal AI knowledge to try answering the user anyway. Answer concisely.' },
+                        { role: 'system', content: 'You are an autonomous AI Discord agent named Oakawol Bot. You read ALL messages in the server implicitly. Note: users will tag people as <@123456789>, extract the 123456789 part to use as userId. If a tool fails to find what the user asked for, you MUST use your own internal AI knowledge to try answering anyway. IMPORTANT: If users are casually chatting among themselves and NOT addressing you or needing any commands, your ONLY output should be exactly the word "IGNORE". Only reply if your assistance is needed.' },
                         { role: 'user', content: prompt }
                     ];
 
@@ -299,10 +318,10 @@ module.exports = async function onMessageCreate(message) {
             }
 
             if (!reply) {
-                return message.reply("Oops, all my AI models are currently down! Please try again later. 🧊").catch(() => {});
+                return; // Suppress missing api error since it processes every msg
             }
 
-            if (reply === "COMMAND_EXECUTED_SILENTLY") return;
+            if (reply === "COMMAND_EXECUTED_SILENTLY" || reply.trim().toUpperCase() === "IGNORE") return;
 
             if (reply.length > 2000) {
                 reply = reply.substring(0, 1997) + '...';
@@ -310,32 +329,6 @@ module.exports = async function onMessageCreate(message) {
             return message.reply(reply).catch(() => {});
         } catch (error) {
             console.error('[Groq Unexpected Error]', error);
-            return message.reply("Oops, I encountered an unexpected error while thinking! 🧊").catch(() => {});
         }
-    }
-
-    if (isDM) return;
-
-    const ticket = db.getTicket(message.channel.id);
-    if (!ticket) return;
-
-    const config  = db.getGuildConfig(message.guild.id);
-    const isAdmin = message.member.permissions.has(PermissionFlagsBits.Administrator) ||
-                    (config.adminRoleId && message.member.roles.cache.has(config.adminRoleId));
-    if (isAdmin) return;
-
-    const urlMatch = message.content.match(URL_REGEX);
-    if (!urlMatch) return;
-
-    const url = urlMatch[0];
-
-    try {
-        if (REDDIT_REGEX.test(url)) {
-            await message.react(LOADING_EMOJI);
-        } else {
-            await message.react('✅');
-        }
-    } catch (err) {
-        console.error('[LinkCheck] Failed to react:', err.message);
     }
 };
