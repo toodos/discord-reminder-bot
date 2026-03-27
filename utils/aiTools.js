@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 
 const aiToolDefinitions = [
     // Moderation & Interaction
@@ -246,6 +246,64 @@ const aiToolDefinitions = [
                 required: ['coin']
             }
         }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'generate_image',
+            description: 'Generates a custom AI image based on a text prompt.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    prompt: { type: 'string', description: 'The detailed description of the image to generate' }
+                },
+                required: ['prompt']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_trivia_question',
+            description: 'Fetches a random trivia question to quiz the users.',
+            parameters: { type: 'object', properties: {} }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_random_quote',
+            description: 'Fetches a random inspirational or interesting quote.',
+            parameters: { type: 'object', properties: {} }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'search_github_user',
+            description: 'Fetches basic public repository count and followers for a GitHub user.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    username: { type: 'string', description: 'The GitHub username' }
+                },
+                required: ['username']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_name_stats',
+            description: 'Guesses a person\'s age based on their first name.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    name: { type: 'string', description: 'The first name to analyze' }
+                },
+                required: ['name']
+            }
+        }
     }
 ];
 
@@ -373,6 +431,53 @@ async function executeTool(tName, args, message) {
                 const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coin}&vs_currencies=usd`).then(r => r.json()).catch(() => null);
                 if (!res || !res[coin]) return `I couldn't find the price for ${args.coin}. Make sure you use the full name (like 'bitcoin' not 'btc'). 🧊`;
                 return `The current price of **${args.coin}** is **$${res[coin].usd}**. 💸`;
+            }
+            case 'generate_image': {
+                await message.channel.sendTyping();
+                const prompt = encodeURIComponent(args.prompt);
+                let url = `https://image.pollinations.ai/prompt/${prompt}?width=1024&height=1024&nologo=true&model=flux`;
+                if (process.env.POLLINATIONS_API_KEY && !process.env.POLLINATIONS_API_KEY.includes('your_')) {
+                    url += `&key=${encodeURIComponent(process.env.POLLINATIONS_API_KEY.trim())}`;
+                }
+                const res = await fetch(url).catch(() => null);
+                if (!res || !res.ok) return `I couldn't imagine that properly right now! 🧊`;
+                const buffer = await res.arrayBuffer();
+                const attachment = new AttachmentBuilder(Buffer.from(buffer), { name: 'imagine.jpeg' });
+                await message.channel.send({ content: `🎨 **Imagined:** *${args.prompt}*`, files: [attachment] });
+                return `Successfully generated the image!`;
+            }
+            case 'get_trivia_question': {
+                const res = await fetch(`https://opentdb.com/api.php?amount=1&type=multiple`).then(r => r.json()).catch(() => null);
+                if (!res || !res.results || !res.results[0]) return `I couldn't think of a trivia question. 🧊`;
+                const t = res.results[0];
+                return `**Trivia Category: ${t.category}**\n*Difficulty: ${t.difficulty}*\n\n**Q:** ${t.question.replace(/&quot;/g, '"').replace(/&#039;/g, "'")}\n\n||**A:** ${t.correct_answer.replace(/&quot;/g, '"').replace(/&#039;/g, "'")}||`;
+            }
+            case 'get_random_quote': {
+                const res = await fetch(`https://api.quotable.io/random`).then(r => r.json()).catch(() => null);
+                if (!res || !res.content) return `I couldn't find a quote. 🧊`;
+                return `"${res.content}" \n- **${res.author}**`;
+            }
+            case 'search_github_user': {
+                const res = await fetch(`https://api.github.com/users/${encodeURIComponent(args.username)}`).then(r => r.json()).catch(() => null);
+                if (!res || res.message === 'Not Found') return `I couldn't find a GitHub user named ${args.username}. 🧊`;
+                const embed = new EmbedBuilder()
+                    .setTitle(`GitHub: ${res.login}`)
+                    .setURL(res.html_url)
+                    .setThumbnail(res.avatar_url)
+                    .setDescription(res.bio || 'No bio provided.')
+                    .addFields(
+                        { name: 'Public Repos', value: `${res.public_repos}`, inline: true },
+                        { name: 'Followers', value: `${res.followers}`, inline: true }
+                    )
+                    .setColor('#2b3137');
+                await message.channel.send({ embeds: [embed] });
+                return `Here is the GitHub info for ${args.username}!`;
+            }
+            case 'get_name_stats': {
+                const name = encodeURIComponent(args.name);
+                const ageRes = await fetch(`https://api.agify.io?name=${name}`).then(r => r.json()).catch(() => null);
+                if (!ageRes || !ageRes.age) return `I couldn't find any stats for the name ${args.name}. 🧊`;
+                return `Based on my dataset, people named **${args.name}** are typically around **${ageRes.age}** years old! 🤯`;
             }
             default:
                 return `I tried to use a tool but didn't recognize it.`;

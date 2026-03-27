@@ -115,7 +115,25 @@ module.exports = async function onMessageCreate(message) {
             await message.channel.sendTyping();
             let reply = null;
 
-            const tools = aiToolDefinitions;
+            const dynamicTools = [ ...aiToolDefinitions ];
+
+            if (message.client.commands) {
+                for (const [cmdName, cmd] of message.client.commands.entries()) {
+                    dynamicTools.push({
+                        type: 'function',
+                        function: {
+                            name: `cmd_${cmdName.replace(/[^a-zA-Z0-9_-]/g, '')}`,
+                            description: `Executes the built-in bot command '${cmdName}'. Description: ${cmd.description || 'No description'}`,
+                            parameters: {
+                                type: 'object',
+                                properties: {
+                                    args: { type: 'string', description: 'Any text arguments the command might need' }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
 
             for (const model of GROQ_MODELS) {
                 try {
@@ -125,7 +143,7 @@ module.exports = async function onMessageCreate(message) {
                             { role: 'user', content: prompt }
                         ],
                         model: model,
-                        tools: tools,
+                        tools: dynamicTools,
                         tool_choice: 'auto'
                     });
                     
@@ -133,10 +151,62 @@ module.exports = async function onMessageCreate(message) {
                     
                     if (responseMessage?.tool_calls) {
                         for (const toolCall of responseMessage.tool_calls) {
-                            const args = JSON.parse(toolCall.function.arguments);
+                            const argsObj = JSON.parse(toolCall.function.arguments);
                             const tName = toolCall.function.name;
                             
-                            reply = await executeTool(tName, args, message);
+                            if (tName.startsWith('cmd_')) {
+                                const cmdName = tName.replace('cmd_', '');
+                                const command = message.client.commands?.get(cmdName);
+                                if (command) {
+                                    const mockArgs = (argsObj.args || '').split(' ');
+                                    let commandReplied = false;
+                                    const mockInteraction = {
+                                        client: message.client,
+                                        user: message.author,
+                                        member: message.member,
+                                        guild: message.guild,
+                                        channel: message.channel,
+                                        commandName: cmdName,
+                                        isChatInputCommand: () => true,
+                                        deferReply: async () => { await message.channel.sendTyping(); },
+                                        reply: async (data) => { 
+                                            commandReplied = true;
+                                            return message.reply(data); 
+                                        },
+                                        editReply: async (data) => {
+                                            commandReplied = true;
+                                            return message.channel.send(data);
+                                        },
+                                        followUp: async (data) => {
+                                            commandReplied = true;
+                                            return message.channel.send(data);
+                                        },
+                                        options: {
+                                            getString: () => argsObj.args || null,
+                                            getUser: () => {
+                                                const match = (argsObj.args || '').match(/<@!?(\d+)>/);
+                                                return match ? message.client.users.cache.get(match[1]) || null : null;
+                                            },
+                                            getChannel: () => null,
+                                            getRole: () => null,
+                                            getInteger: () => parseInt(mockArgs[0]) || null,
+                                            getNumber: () => parseFloat(mockArgs[0]) || null,
+                                            getBoolean: () => null,
+                                        }
+                                    };
+                                    try {
+                                        await command.execute(mockInteraction);
+                                        reply = commandReplied ? "COMMAND_EXECUTED_SILENTLY" : "I executed the command for you! 🌸";
+                                    } catch (err) {
+                                        console.error(`[AI Cmd Error]`, err);
+                                        reply = `Error executing internal command! 🧊`;
+                                    }
+                                } else {
+                                    reply = "Command not found.";
+                                }
+                            } else {
+                                reply = await executeTool(tName, argsObj, message);
+                            }
                         }
                         if (reply) break;
                     } else if (responseMessage?.content) {
@@ -151,6 +221,8 @@ module.exports = async function onMessageCreate(message) {
             if (!reply) {
                 return message.reply("Oops, all my AI models are currently down! Please try again later. 🧊").catch(() => {});
             }
+
+            if (reply === "COMMAND_EXECUTED_SILENTLY") return;
 
             if (reply.length > 2000) {
                 reply = reply.substring(0, 1997) + '...';
