@@ -137,11 +137,13 @@ module.exports = async function onMessageCreate(message) {
 
             for (const model of GROQ_MODELS) {
                 try {
+                    const messages = [
+                        { role: 'system', content: 'You are a helpful, powerful Discord chatbot named Oakawol Bot. You have massive tools. Note: for IDs, users will tag people, which look like <@123456789>, you must extract the 123456789 part to use as userId. If a tool fails to find what the user asked for (e.g. dictionary or web search fails), you MUST use your own internal AI knowledge to try answering the user anyway. Answer concisely.' },
+                        { role: 'user', content: prompt }
+                    ];
+
                     const completion = await groqClient.chat.completions.create({
-                        messages: [
-                            { role: 'system', content: 'You are a helpful, powerful Discord chatbot named Oakawol Bot. You have massive tools you can execute on behalf of the admin or user. Note: for IDs, users will tag people, which look like <@123456789>, you must extract the 123456789 part to use as userId. Answer concisely.' },
-                            { role: 'user', content: prompt }
-                        ],
+                        messages: messages,
                         model: model,
                         tools: dynamicTools,
                         tool_choice: 'auto'
@@ -150,9 +152,14 @@ module.exports = async function onMessageCreate(message) {
                     const responseMessage = completion.choices[0]?.message;
                     
                     if (responseMessage?.tool_calls) {
+                        messages.push(responseMessage);
+                        
+                        let executedSilently = false;
+
                         for (const toolCall of responseMessage.tool_calls) {
                             const argsObj = JSON.parse(toolCall.function.arguments);
                             const tName = toolCall.function.name;
+                            let toolResult = "";
                             
                             if (tName.startsWith('cmd_')) {
                                 const cmdName = tName.replace('cmd_', '');
@@ -196,17 +203,35 @@ module.exports = async function onMessageCreate(message) {
                                     };
                                     try {
                                         await command.execute(mockInteraction);
-                                        reply = commandReplied ? "COMMAND_EXECUTED_SILENTLY" : "I executed the command for you! 🌸";
+                                        if (commandReplied) executedSilently = true;
+                                        toolResult = commandReplied ? "COMMAND_EXECUTED_SILENTLY" : "I executed the command for you! 🌸";
                                     } catch (err) {
                                         console.error(`[AI Cmd Error]`, err);
-                                        reply = `Error executing internal command! 🧊`;
+                                        toolResult = `Error executing internal command! 🧊`;
                                     }
                                 } else {
-                                    reply = "Command not found.";
+                                    toolResult = "Command not found.";
                                 }
                             } else {
-                                reply = await executeTool(tName, argsObj, message);
+                                toolResult = await executeTool(tName, argsObj, message);
                             }
+                            
+                            messages.push({
+                                role: 'tool',
+                                tool_call_id: toolCall.id,
+                                name: tName,
+                                content: String(toolResult)
+                            });
+                        }
+                        
+                        const secondCompletion = await groqClient.chat.completions.create({
+                            messages: messages,
+                            model: model
+                        });
+                        
+                        reply = secondCompletion.choices[0]?.message?.content;
+                        if (executedSilently && (!reply || reply.trim() === '')) {
+                            reply = "COMMAND_EXECUTED_SILENTLY";
                         }
                         if (reply) break;
                     } else if (responseMessage?.content) {
