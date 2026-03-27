@@ -17,7 +17,7 @@ const URL_REGEX = /https?:\/\/[^\s]+/;
 
 const GROQ_MODELS = [
     'llama-3.3-70b-versatile',
-    'llama3-70b-8192',
+    'mixtral-8x7b-32768',
     'llama-3.1-8b-instant'
 ];
 
@@ -104,7 +104,7 @@ module.exports = async function onMessageCreate(message) {
     }
 
     const isDM = !message.guild;
-    const isChatRequest = true; // Read ALL messages automatically
+    const isChatRequest = isDM || message.mentions.has(message.client.user);
 
     // ----- TICKET LINK CHECKER (Moved up so it runs instantly) -----
     if (!isDM) {
@@ -167,7 +167,7 @@ module.exports = async function onMessageCreate(message) {
             for (const model of GROQ_MODELS) {
                 try {
                     const messages = [
-                        { role: 'system', content: 'You are an autonomous AI Discord agent named Oakawol Bot. You read ALL messages in the server implicitly. Note: users will tag people as <@123456789>, extract the 123456789 part to use as userId. If a tool fails to find what the user asked for, you MUST use your own internal AI knowledge to try answering anyway. IMPORTANT: If users are casually chatting among themselves and NOT addressing you or needing any commands, your ONLY output should be exactly the word "IGNORE". Only reply if your assistance is needed.' },
+                        { role: 'system', content: 'You are an autonomous AI Discord agent named Oakawol Bot. Note: users will tag people as <@123456789>, extract the 123456789 part to use as userId. If a tool fails to find what the user asked for, you MUST use your own internal AI knowledge to try answering anyway. You have massive tools. Answer concisely.' },
                         { role: 'user', content: prompt }
                     ];
 
