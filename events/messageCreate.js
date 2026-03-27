@@ -78,13 +78,13 @@ module.exports = async function onMessageCreate(message) {
                     getRole: () => null,
                     getInteger: () => {
                         const vals = args.join(' ').match(/-?\b\d+(?:\.\d+)?\b/g) || [];
-                        const val = vals.find(v => !/^\d{17,20}$/.test(v));
+                        const val = vals[0];
                         if (val) { args = args.filter(a => !a.includes(val)); return parseInt(val); }
                         return null;
                     },
                     getNumber: () => {
                         const vals = args.join(' ').match(/-?\b\d+(?:\.\d+)?\b/g) || [];
-                        const val = vals.find(v => !/^\d{17,20}$/.test(v));
+                        const val = vals[0];
                         if (val) { args = args.filter(a => !a.includes(val)); return parseFloat(val); }
                         return null;
                     },
@@ -203,19 +203,30 @@ module.exports = async function onMessageCreate(message) {
                                             getString: () => argsObj.args || null,
                                             getUser: () => {
                                                 const match = (argsObj.args || '').match(/(?:<@!?)?(\d{17,20})>?/);
-                                                return match ? message.client.users.cache.get(match[1]) || null : null;
+                                                if (match) {
+                                                    argsObj.args = argsObj.args.replace(match[0], '');
+                                                    return message.client.users.cache.get(match[1]) || null;
+                                                }
+                                                return null;
                                             },
-                                            getChannel: () => null,
+                                            getChannel: () => {
+                                                const match = (argsObj.args || '').match(/<#(\d+)>/);
+                                                if (match) {
+                                                    argsObj.args = argsObj.args.replace(match[0], '');
+                                                    return message.guild?.channels.cache.get(match[1]) || null;
+                                                }
+                                                return null;
+                                            },
                                             getRole: () => null,
                                             getInteger: () => {
                                                 const vals = (argsObj.args || '').match(/-?\b\d+(?:\.\d+)?\b/g) || [];
-                                                const val = vals.find(v => !/^\d{17,20}$/.test(v));
+                                                const val = vals[0];
                                                 if (val) { argsObj.args = argsObj.args.replace(val, ''); return parseInt(val); }
                                                 return null;
                                             },
                                             getNumber: () => {
                                                 const vals = (argsObj.args || '').match(/-?\b\d+(?:\.\d+)?\b/g) || [];
-                                                const val = vals.find(v => !/^\d{17,20}$/.test(v));
+                                                const val = vals[0];
                                                 if (val) { argsObj.args = argsObj.args.replace(val, ''); return parseFloat(val); }
                                                 return null;
                                             },
