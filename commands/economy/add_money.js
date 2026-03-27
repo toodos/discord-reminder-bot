@@ -16,6 +16,10 @@ module.exports = {
         const targetUser = interaction.options.getUser('user');
         const amount     = interaction.options.getNumber('amount');
 
+        if (!targetUser || !amount) {
+            return interaction.reply({ embeds: [errorEmbed('Please specify both a valid user and an amount! 🌸')], ephemeral: true });
+        }
+
         if (amount <= 0) {
             return interaction.reply({ embeds: [errorEmbed('Amount must be greater than zero!')], ephemeral: true });
         }

@@ -9,6 +9,10 @@ module.exports = {
     description: 'Check your own or another user\'s current coin balance and leaderboard ranking.',
     async execute(interaction) {
         const targetUser = interaction.options.getUser('user') || interaction.user;
+
+        if (!targetUser) {
+            return interaction.reply({ embeds: [errorEmbed('Could not determine a valid user! 🌸')], ephemeral: true });
+        }
         const userData   = db.getUser(targetUser.id);
         const allUsers   = db.getAllUsers(); // already sorted DESC by balance
 

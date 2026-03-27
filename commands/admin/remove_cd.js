@@ -14,6 +14,10 @@ module.exports = {
         }
 
         const targetUser = interaction.options.getUser('user');
+
+        if (!targetUser) {
+            return interaction.reply({ embeds: [errorEmbed('Please specify a valid user to remove the cooldown from! 🌸')], ephemeral: true });
+        }
         db.removeCooldownByUserId(targetUser.id);
         db.removeRemindersByUserId(targetUser.id);
 

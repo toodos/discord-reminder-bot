@@ -13,6 +13,10 @@ module.exports = {
         const targetUser = interaction.options.getUser('user');
         const timeStr    = interaction.options.getString('time') || '24h';
 
+        if (!targetUser) {
+            return interaction.reply({ embeds: [errorEmbed("Please specify a valid user to apply the cooldown to! 🌸")], ephemeral: true });
+        }
+
         const existing = db.getCooldown(targetUser.id);
         if (existing) {
             const unix = Math.floor(existing.endTime / 1000);
