@@ -222,7 +222,7 @@ module.exports = async function onMessageCreate(message) {
                                     try {
                                         await command.execute(mockInteraction);
                                         if (commandReplied) executedSilently = true;
-                                        toolResult = commandReplied ? "COMMAND_EXECUTED_SILENTLY" : "I executed the command for you! 🌸";
+                                        toolResult = commandReplied ? "SYSTEM NOTE: The command was successfully executed and the results were directly shown to the user in the channel. You DO NOT need to answer the prompt yourself, just briefly acknowledge it was done (like 'Done!' or 'Here you go!'), or say nothing." : "I executed the command for you! 🌸";
                                     } catch (err) {
                                         console.error(`[AI Cmd Error]`, err);
                                         toolResult = `Error executing internal command! 🧊`;
