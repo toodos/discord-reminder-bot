@@ -202,18 +202,24 @@ module.exports = async function onMessageCreate(message) {
                                         options: {
                                             getString: () => argsObj.args || null,
                                             getUser: () => {
-                                                const match = (argsObj.args || '').match(/(?:<@!?)?(\d{17,20})>?/);
-                                                if (match) {
-                                                    argsObj.args = argsObj.args.replace(match[0], '');
-                                                    return message.client.users.cache.get(match[1]) || null;
+                                                const matches = [...(argsObj.args || '').matchAll(/(?:<@!?)?(\d{17,20})>?/g)];
+                                                for (const match of matches) {
+                                                    const user = message.client.users.cache.get(match[1]) || message.guild?.members.cache.get(match[1])?.user;
+                                                    if (user) {
+                                                        argsObj.args = argsObj.args.replace(match[0], '');
+                                                        return user;
+                                                    }
                                                 }
                                                 return null;
                                             },
                                             getChannel: () => {
-                                                const match = (argsObj.args || '').match(/<#(\d+)>/);
-                                                if (match) {
-                                                    argsObj.args = argsObj.args.replace(match[0], '');
-                                                    return message.guild?.channels.cache.get(match[1]) || null;
+                                                const matches = [...(argsObj.args || '').matchAll(/<#(\d+)>/g)];
+                                                for (const match of matches) {
+                                                    const channel = message.guild?.channels.cache.get(match[1]);
+                                                    if (channel) {
+                                                        argsObj.args = argsObj.args.replace(match[0], '');
+                                                        return channel;
+                                                    }
                                                 }
                                                 return null;
                                             },
