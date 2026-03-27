@@ -16,10 +16,9 @@ if (process.env.GROQ_API_KEY) {
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
 const GROQ_MODELS = [
-    'moonshotai/kimi-k2-instruct-0905',
+    'llama-3.3-70b-versatile',
     'llama-3.1-8b-instant',
-    'mixtral-8x7b-32768',
-    'llama-3.3-70b-versatile'
+    'gemma2-9b-it'
 ];
 
 module.exports = async function onMessageCreate(message) {
@@ -138,7 +137,7 @@ module.exports = async function onMessageCreate(message) {
                             parameters: {
                                 type: 'object',
                                 properties: {
-                                    args: { type: 'string', description: 'Any text arguments the command might need' }
+                                    args: { type: 'string', description: 'The FULL text arguments you want to pass to the command (e.g., "75 <@123456789>" or "category name")' }
                                 }
                             }
                         }
