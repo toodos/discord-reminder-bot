@@ -78,12 +78,12 @@ module.exports = async function onMessageCreate(message) {
                     },
                     getRole: () => null,
                     getInteger: () => {
-                        const val = args.find(a => a && !isNaN(a) && !a.startsWith('<'));
+                        const val = args.find(a => a && !isNaN(a) && !a.startsWith('<') && !/^\d{17,20}$/.test(a));
                         if (val) { args.splice(args.indexOf(val), 1); return parseInt(val); }
                         return null;
                     },
                     getNumber: () => {
-                        const val = args.find(a => a && !isNaN(a) && !a.startsWith('<'));
+                        const val = args.find(a => a && !isNaN(a) && !a.startsWith('<') && !/^\d{17,20}$/.test(a));
                         if (val) { args.splice(args.indexOf(val), 1); return parseFloat(val); }
                         return null;
                     },
@@ -207,12 +207,12 @@ module.exports = async function onMessageCreate(message) {
                                             getChannel: () => null,
                                             getRole: () => null,
                                             getInteger: () => {
-                                                const val = mockArgs.find(a => a && !isNaN(a) && !a.startsWith('<'));
+                                                const val = mockArgs.find(a => a && !isNaN(a) && !a.startsWith('<') && !/^\d{17,20}$/.test(a));
                                                 if (val) { mockArgs.splice(mockArgs.indexOf(val), 1); return parseInt(val); }
                                                 return null;
                                             },
                                             getNumber: () => {
-                                                const val = mockArgs.find(a => a && !isNaN(a) && !a.startsWith('<'));
+                                                const val = mockArgs.find(a => a && !isNaN(a) && !a.startsWith('<') && !/^\d{17,20}$/.test(a));
                                                 if (val) { mockArgs.splice(mockArgs.indexOf(val), 1); return parseFloat(val); }
                                                 return null;
                                             },
