@@ -37,6 +37,7 @@ module.exports = async function onMessageCreate(message) {
                 client: message.client,
                 user: message.author,
                 member: message.member,
+                memberPermissions: message.member.permissions,
                 guild: message.guild,
                 channel: message.channel,
                 commandName: commandName,
@@ -76,8 +77,16 @@ module.exports = async function onMessageCreate(message) {
                         return null;
                     },
                     getRole: () => null,
-                    getInteger: () => parseInt(args.shift()) || null,
-                    getNumber: () => parseFloat(args.shift()) || null,
+                    getInteger: () => {
+                        const val = args.find(a => a && !isNaN(a) && !a.startsWith('<'));
+                        if (val) { args.splice(args.indexOf(val), 1); return parseInt(val); }
+                        return null;
+                    },
+                    getNumber: () => {
+                        const val = args.find(a => a && !isNaN(a) && !a.startsWith('<'));
+                        if (val) { args.splice(args.indexOf(val), 1); return parseFloat(val); }
+                        return null;
+                    },
                     getBoolean: () => null,
                 }
             };
@@ -171,6 +180,7 @@ module.exports = async function onMessageCreate(message) {
                                         client: message.client,
                                         user: message.author,
                                         member: message.member,
+                                        memberPermissions: message.member.permissions,
                                         guild: message.guild,
                                         channel: message.channel,
                                         commandName: cmdName,
@@ -196,8 +206,16 @@ module.exports = async function onMessageCreate(message) {
                                             },
                                             getChannel: () => null,
                                             getRole: () => null,
-                                            getInteger: () => parseInt(mockArgs[0]) || null,
-                                            getNumber: () => parseFloat(mockArgs[0]) || null,
+                                            getInteger: () => {
+                                                const val = mockArgs.find(a => a && !isNaN(a) && !a.startsWith('<'));
+                                                if (val) { mockArgs.splice(mockArgs.indexOf(val), 1); return parseInt(val); }
+                                                return null;
+                                            },
+                                            getNumber: () => {
+                                                const val = mockArgs.find(a => a && !isNaN(a) && !a.startsWith('<'));
+                                                if (val) { mockArgs.splice(mockArgs.indexOf(val), 1); return parseFloat(val); }
+                                                return null;
+                                            },
                                             getBoolean: () => null,
                                         }
                                     };
