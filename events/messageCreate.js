@@ -170,9 +170,12 @@ module.exports = async function onMessageCreate(message) {
                     ];
 
                     // Use native fetch to hit Pollinations OpenAI compatibility endpoint
-                    const response = await fetch('https://text.pollinations.ai/openai/chat/completions', {
+                    const response = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${process.env.POLLINATIONS_API_KEY}`
+                        },
                         body: JSON.stringify({
                             model: model,
                             messages: messages,
