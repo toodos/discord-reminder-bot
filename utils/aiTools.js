@@ -740,11 +740,10 @@ async function executeTool(tName, args, message) {
             }
             case 'generate_image': {
                 await message.channel.sendTyping();
-                // Pollinations image generation is free without a key. 
-                // Using a key with zero balance causes 402 errors, so we omit it for images.
-                let url = `https://image.pollinations.ai/prompt/${prompt}?width=1024&height=1024&nologo=true&model=flux&seed=${Math.floor(Math.random() * 1000000)}`;
-                
-                const res = await fetch(url).catch(() => null);
+                // Image generation on Pollinations is free - do NOT send API key to avoid 401/402 errors
+                const imagePrompt = encodeURIComponent(args.prompt || 'abstract art');
+                const imageUrl = `https://image.pollinations.ai/prompt/${imagePrompt}?width=1024&height=1024&nologo=true&model=flux&seed=${Math.floor(Math.random() * 1000000)}`;
+                const res = await fetch(imageUrl).catch(() => null);
                 if (!res || !res.ok) return `I couldn't imagine that properly right now! 🧊`;
                 const buffer = await res.arrayBuffer();
                 const attachment = new AttachmentBuilder(Buffer.from(buffer), { name: 'imagine.jpeg' });

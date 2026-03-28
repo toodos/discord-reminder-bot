@@ -9,23 +9,22 @@ module.exports = {
             return interaction.reply({ content: 'You need to tell me what to imagine! 🌸', ephemeral: true });
         }
 
-        // Send a typing indicator while generating
         if (interaction.deferReply) {
             await interaction.deferReply();
-        } else if (interaction.channel && interaction.channel.sendTyping) {
+        } else if (interaction.channel?.sendTyping) {
             await interaction.channel.sendTyping();
         }
 
         try {
-            // Pollinations.ai generates images strictly via URL. We fetch it as an ArrayBuffer to send as attachment.
-            // Pollinations image generation is free without a key. 
-            // Using a key with zero balance causes 402 errors, so we omit it for images.
-            let url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&model=flux&seed=${Math.floor(Math.random() * 1000000)}`;
+            // Image generation is FREE on Pollinations - do NOT add an API key here
+            // Adding a key with zero balance causes 401/402 errors
+            const encodedPrompt = encodeURIComponent(prompt);
+            const seed = Math.floor(Math.random() * 1000000);
+            const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true&model=flux&seed=${seed}`;
             
             const response = await fetch(url);
             if (!response.ok) {
-                const errText = await response.text().catch(() => 'No text');
-                throw new Error(`Failed to fetch image (${response.status} ${response.statusText}): ${errText}`);
+                throw new Error(`Failed to fetch image (${response.status} ${response.statusText})`);
             }
 
             const buffer = await response.arrayBuffer();
