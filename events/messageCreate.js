@@ -16,7 +16,7 @@ if (process.env.GROQ_API_KEY) {
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
 const GROQ_MODELS = [
-    'qwen-safety',       // Primary: Pollinations AI
+    'openai-pollinations', // Managed via Pollinations (supports tools)
     'llama-3.3-70b-versatile',
     'llama-3.1-8b-instant',
     'llama3-70b-8192',
@@ -171,22 +171,23 @@ module.exports = async function onMessageCreate(message) {
             for (const model of GROQ_MODELS) {
                 try {
                     const messages = [
-                        { role: 'system', content: 'You are an autonomous AI Discord agent named Oakawol Bot. Note: users will tag people as <@123456789>, extract the 123456789 part to use as userId. If a tool fails to find what the user asked for, you MUST use your own internal AI knowledge to try answering anyway. Answer concisely. IMPORTANT: DO NOT hallucinate tools (e.g. search_wikipedia or get_urban_dictionary). ONLY use tools explicitly provided in this request.' },
+                        { role: 'system', content: 'You are an autonomous AI Discord agent named Oakawol Bot. Note: users will tag people as <@123456789>, extract the 123456789 part to use as userId. If a tool fails to find what the user asked for, you MUST use your own internal AI knowledge to try answering anyway. Answer concisely. IMPORTANT: When using tools, you MUST return a valid JSON tool_call object. DO NOT output your own tags or raw text before the tool call. ONLY use tools explicitly provided in this request.' },
                         { role: 'user', content: prompt }
                     ];
 
                     let activeClient = groqClient;
-                    if (model === 'qwen-safety') {
+                    if (model === 'openai-pollinations') {
                         // Switch to Pollinations AI base URL for this specific model
+                        // Using /v1 as suggested by their model list and docs
                         activeClient = new Groq({ 
                             apiKey: 'pollinations', 
-                            baseURL: 'https://gen.pollinations.ai/openai/v1' 
+                            baseURL: 'https://gen.pollinations.ai/v1' 
                         });
                     }
 
                     const completion = await activeClient.chat.completions.create({
                         messages: messages,
-                        model: model,
+                        model: model === 'openai-pollinations' ? 'openai' : model,
                         tools: dynamicTools,
                         tool_choice: 'auto'
                     });
@@ -329,6 +330,8 @@ module.exports = async function onMessageCreate(message) {
                     }
                 } catch (apiError) {
                     console.error(`[Groq Error] Model ${model} failed:`, apiError.message);
+                    // Add a tiny delay to give the next model a chance and mitigate 429s
+                    await new Promise(r => setTimeout(r, 1000));
                 }
             }
 
