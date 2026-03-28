@@ -1,6 +1,7 @@
 /**
  * events/messageCreate.js
- * Handles link detection inside ticket channels and AI chat via Pollinations.
+ * Handles link detection inside ticket channels and AI chat.
+ * Primary engine: Cerebras  |  Fallback: Groq  |  Images: Pollinations
  */
 const { PermissionFlagsBits, EmbedBuilder } = require("discord.js");
 const db = require("../utils/database");
@@ -9,18 +10,29 @@ const { aiToolDefinitions, executeTool } = require("../utils/aiTools");
 
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
-// Primary: mistral (fast, reliable, great tool support)
-// openai: GPT-4o class fallback
-// claude-fast: fast Claude fallback
-// gemini-fast: capable but prone to 502 gateway errors — kept as late fallback
-// qwen-safety: text-only guard model, absolute last resort
-const POLLINATIONS_MODELS = [
-  { model: "mistral", supportsTools: true }, // Mistral — primary
-  { model: "openai", supportsTools: true }, // GPT-4o class — fallback
-  { model: "claude-fast", supportsTools: true }, // Claude Haiku — fallback
-  { model: "gemini-fast", supportsTools: true }, // Gemini Flash — flaky, last tool attempt
-  { model: "qwen-safety", supportsTools: false }, // text-only guard — absolute last resort
+// Primary provider: Cerebras (ultra-fast inference)
+// Fallback provider: Groq
+// Models are tried in order; providers whose API key is missing are skipped.
+const AI_MODELS = [
+  { provider: "cerebras", model: "qwen-3-235b-a22b-instruct-2507", supportsTools: true  }, // Cerebras primary (large)
+  { provider: "cerebras", model: "llama3.1-8b",                    supportsTools: true  }, // Cerebras fast fallback
+  { provider: "groq",     model: "llama-3.3-70b-versatile",        supportsTools: true  }, // Groq primary
+  { provider: "groq",     model: "llama-3.1-8b-instant",           supportsTools: true  }, // Groq fast fallback
+  { provider: "groq",     model: "gemma2-9b-it",                   supportsTools: false }, // Groq last resort
 ];
+
+function getProviderConfig(provider) {
+  if (provider === "cerebras") {
+    return {
+      url: "https://api.cerebras.ai/v1/chat/completions",
+      key: process.env.CEREBRAS_API_KEY,
+    };
+  }
+  return {
+    url: "https://api.groq.com/openai/v1/chat/completions",
+    key: process.env.GROQ_API_KEY,
+  };
+}
 
 module.exports = async function onMessageCreate(message) {
   if (message.author.bot) return;
@@ -143,11 +155,11 @@ module.exports = async function onMessageCreate(message) {
 
   if (!isChatRequest) return;
 
-  // ----- AI CHAT HANDLER (Pollinations Only) -----
-  if (!process.env.POLLINATIONS_API_KEY) {
+  // ----- AI CHAT HANDLER (Cerebras primary, Groq fallback) -----
+  if (!process.env.CEREBRAS_API_KEY && !process.env.GROQ_API_KEY) {
     return message
       .reply(
-        "I'm not configured with a Pollinations API key! Please set `POLLINATIONS_API_KEY` in the `.env` file.",
+        "I'm not configured with an AI API key! Please set `CEREBRAS_API_KEY` and/or `GROQ_API_KEY` in the `.env` file.",
       )
       .catch(() => {});
   }
@@ -192,7 +204,12 @@ module.exports = async function onMessageCreate(message) {
       }
     }
 
-    for (const { model, supportsTools } of POLLINATIONS_MODELS) {
+    const availableModels = AI_MODELS.filter(
+      ({ provider }) => !!getProviderConfig(provider).key,
+    );
+
+    for (const { provider, model, supportsTools } of availableModels) {
+      const { url: apiUrl, key: apiKey } = getProviderConfig(provider);
       try {
         const messages = [
           {
@@ -222,32 +239,29 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
           requestBody.tool_choice = "auto";
         }
 
-        const response = await fetch(
-          "https://gen.pollinations.ai/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
-            },
-            body: JSON.stringify(requestBody),
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
           },
-        );
+          body: JSON.stringify(requestBody),
+        });
 
         if (!response.ok) {
           const errBody = await response.text();
           const is5xx = response.status >= 500 && response.status < 600;
+          const providerTag = provider.charAt(0).toUpperCase() + provider.slice(1);
           const err = new Error(
-            `Pollinations API failed (${model}): ${response.status} ${errBody}`,
+            `${providerTag} API failed (${model}): ${response.status} ${errBody}`,
           );
-          // Log 5xx as a quiet warning — these are transient upstream issues, not bugs
           if (is5xx) {
             console.warn(
-              `[Pollinations] ⚠️  Model ${model} returned ${response.status} (gateway issue) — trying next model...`,
+              `[${providerTag}] ⚠️  Model ${model} returned ${response.status} (gateway issue) — trying next model...`,
             );
           } else {
             console.error(
-              `[Pollinations] ❌ Model ${model} returned ${response.status} — trying next model...`,
+              `[${providerTag}] ❌ Model ${model} returned ${response.status} — trying next model...`,
             );
           }
           throw err;
@@ -417,18 +431,16 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
 
           try {
             // Second API call to get final text response after tool execution
-            const secondResponse = await fetch(
-              "https://gen.pollinations.ai/v1/chat/completions",
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${process.env.POLLINATIONS_API_KEY}`,
-                },
-                body: JSON.stringify({ model: model, messages: messages }),
+            const secondResponse = await fetch(apiUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
               },
-            );
+              body: JSON.stringify({ model: model, messages: messages }),
+            });
 
+            const providerTag = provider.charAt(0).toUpperCase() + provider.slice(1);
             if (secondResponse.ok) {
               const secondCompletion = await secondResponse.json();
               let rawReply =
@@ -444,12 +456,13 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
               secondReply = rawReply || secondReply;
             } else {
               console.warn(
-                `[Pollinations] Second call failed (${model}): ${secondResponse.status} — tools already ran, using fallback reply`,
+                `[${providerTag}] Second call failed (${model}): ${secondResponse.status} — tools already ran, using fallback reply`,
               );
             }
           } catch (secondErr) {
+            const providerTag = provider.charAt(0).toUpperCase() + provider.slice(1);
             console.warn(
-              `[Pollinations] Second call error (${model}):`,
+              `[${providerTag}] Second call error (${model}):`,
               secondErr.message,
             );
           }
@@ -463,10 +476,13 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
 
         if (reply) break;
       } catch (err) {
-        // Only log unexpected errors here — 5xx gateway errors are already warned above
-        if (!err.message.includes("Pollinations API failed")) {
+        const providerTag = provider.charAt(0).toUpperCase() + provider.slice(1);
+        const knownApiErr =
+          err.message.includes("Cerebras API failed") ||
+          err.message.includes("Groq API failed");
+        if (!knownApiErr) {
           console.error(
-            `[Pollinations] ❌ Unexpected error with model ${model}:`,
+            `[${providerTag}] ❌ Unexpected error with model ${model}:`,
             err.message,
           );
         }

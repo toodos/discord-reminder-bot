@@ -7,7 +7,7 @@ require("dotenv").config();
 // ─── Environment Validation ───────────────────────────────────────────────────
 
 const REQUIRED_ENV = ["DISCORD_TOKEN", "CLIENT_ID"];
-const OPTIONAL_ENV = ["GUILD_ID", "POLLINATIONS_API_KEY"];
+const OPTIONAL_ENV = ["GUILD_ID", "CEREBRAS_API_KEY", "GROQ_API_KEY"];
 
 const missingEnv = REQUIRED_ENV.filter((key) => !process.env[key]);
 if (missingEnv.length > 0) {
@@ -22,10 +22,26 @@ if (missingEnv.length > 0) {
 
 for (const key of OPTIONAL_ENV) {
   if (!process.env[key]) {
-    console.warn(
-      `[Config] ⚠️  Optional env var "${key}" is not set.${key === "POLLINATIONS_API_KEY" ? " AI chat will not work." : " Commands will be deployed globally (up to 1h delay)."}`,
-    );
+    if (key === "CEREBRAS_API_KEY") {
+      console.warn(
+        `[Config] ⚠️  Optional env var "CEREBRAS_API_KEY" is not set. Cerebras (primary engine) will be skipped.`,
+      );
+    } else if (key === "GROQ_API_KEY") {
+      console.warn(
+        `[Config] ⚠️  Optional env var "GROQ_API_KEY" is not set. Groq (fallback engine) will be skipped.`,
+      );
+    } else {
+      console.warn(
+        `[Config] ⚠️  Optional env var "${key}" is not set. Commands will be deployed globally (up to 1h delay).`,
+      );
+    }
   }
+}
+
+if (!process.env.CEREBRAS_API_KEY && !process.env.GROQ_API_KEY) {
+  console.warn(
+    "[Config] ⚠️  Neither CEREBRAS_API_KEY nor GROQ_API_KEY is set — AI chat will not work.",
+  );
 }
 
 const {
