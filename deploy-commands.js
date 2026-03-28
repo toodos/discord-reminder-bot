@@ -174,6 +174,48 @@ const commands = [
             { name: 'reason', description: 'Reason for closing', type: 3, required: false },
         ],
     },
+
+    // ── UPI Payments ───────────────────────────────────────────────────────────
+    {
+        name: 'upi',
+        description: 'Save or look up a user\'s UPI ID and QR code 💳',
+        options: [
+            {
+                name: 'set',
+                description: 'Save a user\'s UPI ID and optional QR code 💾',
+                type: 1,
+                default_member_permissions: PermissionFlagsBits.Administrator.toString(),
+                options: [
+                    { name: 'user',    description: 'The user to save UPI info for 👤',        type: 6,  required: true  },
+                    { name: 'upi_id',  description: 'Their UPI ID (e.g. name@upi) 💳',         type: 3,  required: true  },
+                    { name: 'qr_code', description: 'Upload their UPI QR code image 🖼️',        type: 11, required: false },
+                ],
+            },
+            {
+                name: 'get',
+                description: 'Look up a user\'s saved UPI details 🔍',
+                type: 1,
+                options: [
+                    { name: 'user', description: 'The user to look up (default: you) 👤', type: 6, required: false },
+                ],
+            },
+            {
+                name: 'delete',
+                description: 'Delete a user\'s saved UPI info 🗑️',
+                type: 1,
+                default_member_permissions: PermissionFlagsBits.Administrator.toString(),
+                options: [
+                    { name: 'user', description: 'The user whose UPI info to delete 👤', type: 6, required: true },
+                ],
+            },
+            {
+                name: 'list',
+                description: 'List all saved UPI records on this server 📋',
+                type: 1,
+                default_member_permissions: PermissionFlagsBits.Administrator.toString(),
+            },
+        ],
+    },
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);

@@ -79,6 +79,15 @@ db.exec(`
         slot    INTEGER PRIMARY KEY,
         message TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS upi_info (
+        userId      TEXT NOT NULL,
+        guildId     TEXT NOT NULL,
+        upiId       TEXT NOT NULL,
+        qrUrl       TEXT,
+        savedAt     INTEGER NOT NULL,
+        PRIMARY KEY (userId, guildId)
+    );
 `);
 
 // ─── Economy ──────────────────────────────────────────────────────────────────
@@ -108,6 +117,12 @@ const stmts = {
     setMemory:      db.prepare('INSERT INTO memory (slot, message) VALUES (?, ?) ON CONFLICT(slot) DO UPDATE SET message=excluded.message'),
     getMemory:      db.prepare('SELECT message FROM memory WHERE slot = ?'),
     getAllMemory:    db.prepare('SELECT * FROM memory'),
+
+    // UPI
+    setUpi:         db.prepare('INSERT INTO upi_info (userId, guildId, upiId, qrUrl, savedAt) VALUES (?, ?, ?, ?, ?) ON CONFLICT(userId, guildId) DO UPDATE SET upiId=excluded.upiId, qrUrl=excluded.qrUrl, savedAt=excluded.savedAt'),
+    getUpi:         db.prepare('SELECT * FROM upi_info WHERE userId = ? AND guildId = ?'),
+    deleteUpi:      db.prepare('DELETE FROM upi_info WHERE userId = ? AND guildId = ?'),
+    getAllUpi:       db.prepare('SELECT * FROM upi_info WHERE guildId = ?'),
 };
 
 function ensureUser(userId) {
@@ -261,6 +276,24 @@ function getAllMemory() {
     return Object.fromEntries(rows.map(r => [r.slot, r.message]));
 }
 
+// ─── UPI ─────────────────────────────────────────────────────────────────────
+
+function setUpi(userId, guildId, upiId, qrUrl) {
+    stmts.setUpi.run(userId, guildId, upiId, qrUrl || null, Date.now());
+}
+
+function getUpi(userId, guildId) {
+    return stmts.getUpi.get(userId, guildId) || null;
+}
+
+function deleteUpi(userId, guildId) {
+    stmts.deleteUpi.run(userId, guildId);
+}
+
+function getAllUpi(guildId) {
+    return stmts.getAllUpi.all(guildId);
+}
+
 module.exports = {
     // Economy
     getUser, addMoney, removeMoney, getAllUsers,
@@ -275,4 +308,6 @@ module.exports = {
     isBlacklisted,
     // Memory
     setMemory, getMemory, getAllMemory,
+    // UPI
+    setUpi, getUpi, deleteUpi, getAllUpi,
 };
