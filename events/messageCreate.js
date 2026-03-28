@@ -9,10 +9,13 @@ const { aiToolDefinitions, executeTool } = require('../utils/aiTools');
 
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
-// Primary model: qwen-safety (Qwen3Guard 8B). Fallback to openai.
+// Primary: nova-fast (Amazon Nova Micro) - fast & supports tools
+// Fallbacks: openai, mistral (tool support), qwen-safety (text only)
 const POLLINATIONS_MODELS = [
-    'qwen-safety',
-    'openai'
+    { model: 'nova-fast', supportsTools: true },   // Amazon Nova Micro - primary
+    { model: 'openai', supportsTools: true },        // GPT-4o fallback
+    { model: 'mistral', supportsTools: true },       // Mistral fallback
+    { model: 'qwen-safety', supportsTools: false },  // guard model - text only
 ];
 
 module.exports = async function onMessageCreate(message) {
@@ -134,6 +137,9 @@ module.exports = async function onMessageCreate(message) {
         return message.reply("Hello! How can I help you today? 🌸").catch(() => {});
     }
 
+    // Signal bot is busy → DND
+    if (message.client.setActivity) message.client.setActivity(true);
+
     try {
         await message.channel.sendTyping();
         let reply = null;
@@ -159,12 +165,23 @@ module.exports = async function onMessageCreate(message) {
             }
         }
 
-        for (const model of POLLINATIONS_MODELS) {
+        for (const { model, supportsTools } of POLLINATIONS_MODELS) {
             try {
                 const messages = [
                     { role: 'system', content: 'You are an autonomous AI Discord agent named Oakawol Bot. You can generate images using the `generate_image` tool when users ask for images or art. Users tag people as <@123456789> — extract the numeric ID to use as userId. If a tool fails, use your own knowledge to answer anyway. Be concise and friendly.' },
                     { role: 'user', content: prompt }
                 ];
+
+                const requestBody = {
+                    model: model,
+                    messages: messages,
+                };
+
+                // Only pass tools to models that support them
+                if (supportsTools) {
+                    requestBody.tools = dynamicTools;
+                    requestBody.tool_choice = 'auto';
+                }
 
                 const response = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
                     method: 'POST',
@@ -172,12 +189,7 @@ module.exports = async function onMessageCreate(message) {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${process.env.POLLINATIONS_API_KEY}`
                     },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: messages,
-                        tools: dynamicTools,
-                        tool_choice: 'auto'
-                    })
+                    body: JSON.stringify(requestBody)
                 });
                 
                 if (!response.ok) {
@@ -342,15 +354,24 @@ module.exports = async function onMessageCreate(message) {
             }
         }
 
-        if (!reply) return;
+        if (!reply) {
+            if (message.client.setActivity) message.client.setActivity(false);
+            return;
+        }
 
-        if (reply === "COMMAND_EXECUTED_SILENTLY" || reply.trim().toUpperCase() === "IGNORE") return;
+        if (reply === "COMMAND_EXECUTED_SILENTLY" || reply.trim().toUpperCase() === "IGNORE") {
+            if (message.client.setActivity) message.client.setActivity(false);
+            return;
+        }
 
         if (reply.length > 2000) {
             reply = reply.substring(0, 1997) + '...';
         }
-        return message.reply(reply).catch(() => {});
+        const result = await message.reply(reply).catch(() => {});
+        if (message.client.setActivity) message.client.setActivity(false);
+        return result;
     } catch (error) {
         console.error('[AI Unexpected Error]', error);
+        if (message.client.setActivity) message.client.setActivity(false);
     }
 };

@@ -33,17 +33,44 @@ client.once('ready', () => {
     console.log(`[Bot] Logged in as ${client.user.tag}`);
 
     let statusIndex = 0;
+    let lastActivityTime = Date.now();
+    let isBusy = false;
 
-    const setNextStatus = () => {
-        client.user.setPresence({
-            activities: [{ name: statuses[statusIndex], type: ActivityType.Custom }],
-            status: 'dnd',
-        });
-        statusIndex = (statusIndex + 1) % statuses.length;
+    // Expose activity tracker globally so messageCreate.js can call it
+    client.setActivity = (busy) => {
+        isBusy = busy;
+        if (busy) lastActivityTime = Date.now();
     };
 
-    setNextStatus(); // Set immediately on ready
-    setInterval(setNextStatus, 20000); // And update every 20 seconds
+    const updatePresence = () => {
+        const idleThresholdMs = 10 * 60 * 1000; // 10 minutes
+        const timeSinceActivity = Date.now() - lastActivityTime;
+
+        if (isBusy) {
+            // DND = bot is currently processing something
+            client.user.setPresence({
+                activities: [{ name: '⚙️ Processing...', type: ActivityType.Custom }],
+                status: 'dnd',
+            });
+        } else if (timeSinceActivity > idleThresholdMs) {
+            // Idle = no one has used the bot in 10+ minutes
+            client.user.setPresence({
+                activities: [{ name: statuses[statusIndex], type: ActivityType.Custom }],
+                status: 'idle',
+            });
+            statusIndex = (statusIndex + 1) % statuses.length;
+        } else {
+            // Online = active but not busy
+            client.user.setPresence({
+                activities: [{ name: statuses[statusIndex], type: ActivityType.Custom }],
+                status: 'online',
+            });
+            statusIndex = (statusIndex + 1) % statuses.length;
+        }
+    };
+
+    updatePresence();
+    setInterval(updatePresence, 20000); // Cycle every 20 seconds
 
     timerManager.init(client);
 });
