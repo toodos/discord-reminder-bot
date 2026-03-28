@@ -11,10 +11,7 @@ const { aiToolDefinitions, executeTool } = require('../utils/aiTools');
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
 const POLLINATIONS_MODELS = [
-    'openai',    // GPT-4o-ish
-    'mistral',   // Stable fallback
-    'p1',        // Search/Agent model
-    'qwen-coder' // Coding/Strict fallback
+    'qwen-safety' // Qwen3Guard 8B (Requested for efficiency)
 ];
 
 module.exports = async function onMessageCreate(message) {
