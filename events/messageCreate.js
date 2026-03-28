@@ -9,10 +9,11 @@ const { aiToolDefinitions, executeTool } = require('../utils/aiTools');
 
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
-// Primary: openai (most reliable, supports tools, fewer false positives)
-// Fallbacks: nova-fast, mistral, qwen-safety (text only)
+// Primary: gemini-fast (Google Gemini 2.5 Flash Lite) - extremely fast, supports tools
+// Fallbacks: openai, mistral, nova-fast, qwen-safety (text only)
 const POLLINATIONS_MODELS = [
-    { model: 'openai', supportsTools: true },        // GPT-4o - primary
+    { model: 'gemini-fast', supportsTools: true },    // Gemini 2.5 Flash Lite - primary
+    { model: 'openai', supportsTools: true },         // GPT-4o fallback
     { model: 'mistral', supportsTools: true },        // Mistral fallback
     { model: 'nova-fast', supportsTools: true },      // Amazon Nova Micro fallback
     { model: 'qwen-safety', supportsTools: false },   // guard model - text only, last resort
