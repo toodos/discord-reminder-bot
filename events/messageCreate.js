@@ -175,22 +175,34 @@ module.exports = async function onMessageCreate(message) {
                         { role: 'user', content: prompt }
                     ];
 
-                    let activeClient = groqClient;
+                    let completion;
                     if (model === 'openai-pollinations') {
-                        // Switch to Pollinations AI base URL for this specific model
-                        // Using /v1 as suggested by their model list and docs
-                        activeClient = new Groq({ 
-                            apiKey: 'pollinations', 
-                            baseURL: 'https://gen.pollinations.ai/v1' 
+                        // Use native fetch to hit Pollinations OpenAI compatibility endpoint
+                        const response = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                model: 'openai',
+                                messages: messages,
+                                tools: dynamicTools,
+                                tool_choice: 'auto'
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            const errBody = await response.text();
+                            throw new Error(`Pollinations API failed: ${response.status} ${errBody}`);
+                        }
+                        completion = await response.json();
+                    } else {
+                        // Use Groq SDK for authentic Groq models
+                        completion = await groqClient.chat.completions.create({
+                            messages: messages,
+                            model: model,
+                            tools: dynamicTools,
+                            tool_choice: 'auto'
                         });
                     }
-
-                    const completion = await activeClient.chat.completions.create({
-                        messages: messages,
-                        model: model === 'openai-pollinations' ? 'openai' : model,
-                        tools: dynamicTools,
-                        tool_choice: 'auto'
-                    });
                     
                     const responseMessage = completion.choices[0]?.message;
                     
