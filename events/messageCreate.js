@@ -11,10 +11,11 @@ const { aiToolDefinitions, executeTool } = require('../utils/aiTools');
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
 const OPENROUTER_MODELS = [
-    'meta-llama/llama-3.3-70b-instruct:free',    // Powerful 70B model
-    'google/gemma-3-27b-it:free',                // Google's latest Gemma 3
-    'nousresearch/hermes-3-llama-3.1-405b:free', // Frontier-level 405B
-    'meta-llama/llama-3.2-3b-instruct:free'      // Fast lightweight
+    'nvidia/nemotron-3-super-120b-a12b:free', // Pro-level 120B with Tools
+    'meta-llama/llama-3.3-70b-instruct:free',  // High-end 70B with Tools
+    'nvidia/nemotron-3-nano-30b-a3b:free',    // Fast 30B with Tools
+    'nvidia/nemotron-nano-12b-v2-vl:free',    // Lightweight with Tools
+    'nvidia/nemotron-nano-9b-v2:free'         // Efficient with Tools
 ];
 
 const POLLINATIONS_MODELS = [
