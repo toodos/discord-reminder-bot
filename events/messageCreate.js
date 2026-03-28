@@ -168,7 +168,22 @@ module.exports = async function onMessageCreate(message) {
         for (const { model, supportsTools } of POLLINATIONS_MODELS) {
             try {
                 const messages = [
-                    { role: 'system', content: 'You are an autonomous AI Discord agent named Oakawol Bot. You can generate images using the `generate_image` tool when users ask for images or art. Users tag people as <@123456789> — extract the numeric ID to use as userId. If a tool fails, use your own knowledge to answer anyway. Be concise and friendly.' },
+                    { role: 'system', content: `You are Oakawol Bot, an autonomous AI Discord server assistant. You MUST use the provided tools to execute actions — never say you can't do something if a tool exists for it.
+
+KEY COMMANDS YOU HAVE ACCESS TO (call them via their cmd_ tool):
+- cmd_add_money: Add coins to a user. args format: "<amount> <@userId or userId>"
+- cmd_remove_money: Remove coins from a user. args format: "<amount> <@userId or userId>"
+- cmd_balance: Check a user's coin balance. args format: "<@userId or userId>"
+- cmd_imagine: Generate an image. args format: "<prompt text>"
+- cmd_remind: Set a reminder. args format: "<time like 10m or 2h> <message>"
+
+RULES:
+- When a user says "remove X coins from @someone", use cmd_remove_money immediately.
+- When a user says "add X coins to @someone", use cmd_add_money immediately.
+- Users are tagged as <@123456789> — pass the raw user ID or the full mention in args.
+- NEVER say you cannot do something if a tool exists for it.
+- Strip any internal reasoning from your reply — only output the final answer.
+- Be concise and friendly. 🌸` },
                     { role: 'user', content: prompt }
                 ];
 
@@ -338,7 +353,17 @@ module.exports = async function onMessageCreate(message) {
                         
                         if (secondResponse.ok) {
                             const secondCompletion = await secondResponse.json();
-                            secondReply = secondCompletion.choices[0]?.message?.content || secondReply;
+                            let rawReply = secondCompletion.choices[0]?.message?.content || secondReply;
+                            // Strip reasoning tags from second call too
+                            if (rawReply) {
+                                rawReply = rawReply
+                                    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
+                                    .replace(/<reflection>[\s\S]*?<\/reflection>/gi, '')
+                                    .replace(/<output>([\s\S]*?)<\/output>/gi, '$1')
+                                    .trim();
+                            }
+                            secondReply = rawReply || secondReply;
+
                         } else {
                             console.warn(`[Pollinations] Second call failed (${model}): ${secondResponse.status} — tools already ran, using fallback reply`);
                         }
@@ -366,6 +391,18 @@ module.exports = async function onMessageCreate(message) {
         }
 
         if (reply === "COMMAND_EXECUTED_SILENTLY" || reply.trim().toUpperCase() === "IGNORE") {
+            if (message.client.setActivity) message.client.setActivity(false);
+            return;
+        }
+
+        // Strip reasoning model thinking tags (nova-fast, qwen, deepseek etc. leak these)
+        reply = reply
+            .replace(/<thinking>[\s\S]*?<\/thinking>/gi, '')
+            .replace(/<reflection>[\s\S]*?<\/reflection>/gi, '')
+            .replace(/<output>([\s\S]*?)<\/output>/gi, '$1')
+            .trim();
+
+        if (!reply) {
             if (message.client.setActivity) message.client.setActivity(false);
             return;
         }
