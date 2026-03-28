@@ -320,29 +320,35 @@ module.exports = async function onMessageCreate(message) {
                             content: String(toolResult)
                         });
                     }
-                    
-                    // Second API call to get final response after tool execution
-                    const secondResponse = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${process.env.POLLINATIONS_API_KEY}`
-                        },
-                        body: JSON.stringify({
-                            model: model,
-                            messages: messages
-                        })
-                    });
-                    
-                    if (!secondResponse.ok) {
-                        throw new Error(`Pollinations second call failed (${model}): ${secondResponse.status}`);
+
+                    // IMPORTANT: Tools were executed — we MUST break after this regardless of whether
+                    // the second call succeeds. If we don't, the next model will re-run the same tools!
+                    let secondReply = executedSilently ? 'COMMAND_EXECUTED_SILENTLY' : null;
+
+                    try {
+                        // Second API call to get final text response after tool execution
+                        const secondResponse = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${process.env.POLLINATIONS_API_KEY}`
+                            },
+                            body: JSON.stringify({ model: model, messages: messages })
+                        });
+                        
+                        if (secondResponse.ok) {
+                            const secondCompletion = await secondResponse.json();
+                            secondReply = secondCompletion.choices[0]?.message?.content || secondReply;
+                        } else {
+                            console.warn(`[Pollinations] Second call failed (${model}): ${secondResponse.status} — tools already ran, using fallback reply`);
+                        }
+                    } catch (secondErr) {
+                        console.warn(`[Pollinations] Second call error (${model}):`, secondErr.message);
                     }
-                    
-                    const secondCompletion = await secondResponse.json();
-                    reply = secondCompletion.choices[0]?.message?.content;
-                    if (executedSilently && (!reply || reply.trim() === '')) {
-                        reply = "COMMAND_EXECUTED_SILENTLY";
-                    }
+
+                    // Set reply and ALWAYS break — tools already ran, do not retry with another model
+                    reply = secondReply || 'Done! ✅';
+                    break;
                 } else if (responseMessage?.content) {
                     reply = responseMessage.content;
                 }
