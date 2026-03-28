@@ -18,12 +18,10 @@ module.exports = {
 
         try {
             // Pollinations.ai generates images strictly via URL. We fetch it as an ArrayBuffer to send as attachment.
-            let url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&model=flux`;
+            // Pollinations image generation is free without a key. 
+            // Using a key with zero balance causes 402 errors, so we omit it for images.
+            let url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&model=flux&seed=${Math.floor(Math.random() * 1000000)}`;
             
-            if (process.env.POLLINATIONS_API_KEY && !process.env.POLLINATIONS_API_KEY.includes('your_')) {
-                url += `&key=${encodeURIComponent(process.env.POLLINATIONS_API_KEY.trim())}`;
-            }
-
             const response = await fetch(url);
             if (!response.ok) {
                 const errText = await response.text().catch(() => 'No text');

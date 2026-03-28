@@ -188,7 +188,7 @@ module.exports = async function onMessageCreate(message) {
                 for (const model of provider.models) {
                     try {
                         const messages = [
-                            { role: 'system', content: 'You are an autonomous AI Discord agent named Oakawol Bot. Note: users will tag people as <@123456789>, extract the 123456789 part to use as userId. If a tool fails to find what the user asked for, you MUST use your own internal AI knowledge to try answering anyway. Answer concisely. IMPORTANT: When using tools, you MUST return a valid JSON tool_call object. DO NOT output your own tags or raw text before the tool call. ONLY use tools explicitly provided in this request.' },
+                            { role: 'system', content: 'You are an autonomous AI Discord agent named Oakawol Bot. You can generate images using the `generate_image` tool. Note: users will tag people as <@123456789>, extract the 123456789 part to use as userId. If a tool fails to find what the user asked for, you MUST use your own internal AI knowledge to try answering anyway. Answer concisely. IMPORTANT: When using tools, you MUST return a valid JSON tool_call object. DO NOT output your own tags or raw text before the tool call. ONLY use tools explicitly provided in this request.' },
                             { role: 'user', content: prompt }
                         ];
 
