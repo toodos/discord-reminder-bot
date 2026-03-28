@@ -16,9 +16,11 @@ if (process.env.GROQ_API_KEY) {
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
 const GROQ_MODELS = [
+    'qwen-safety',       // Primary: Pollinations AI
     'llama-3.3-70b-versatile',
-    'mixtral-8x7b-32768',
-    'llama-3.1-8b-instant'
+    'llama-3.1-8b-instant',
+    'llama3-70b-8192',
+    'llama3-8b-8192'
 ];
 
 module.exports = async function onMessageCreate(message) {
@@ -169,11 +171,20 @@ module.exports = async function onMessageCreate(message) {
             for (const model of GROQ_MODELS) {
                 try {
                     const messages = [
-                        { role: 'system', content: 'You are an autonomous AI Discord agent named Oakawol Bot. Note: users will tag people as <@123456789>, extract the 123456789 part to use as userId. If a tool fails to find what the user asked for, you MUST use your own internal AI knowledge to try answering anyway. You have massive tools. Answer concisely.' },
+                        { role: 'system', content: 'You are an autonomous AI Discord agent named Oakawol Bot. Note: users will tag people as <@123456789>, extract the 123456789 part to use as userId. If a tool fails to find what the user asked for, you MUST use your own internal AI knowledge to try answering anyway. Answer concisely. IMPORTANT: DO NOT hallucinate tools (e.g. search_wikipedia or get_urban_dictionary). ONLY use tools explicitly provided in this request.' },
                         { role: 'user', content: prompt }
                     ];
 
-                    const completion = await groqClient.chat.completions.create({
+                    let activeClient = groqClient;
+                    if (model === 'qwen-safety') {
+                        // Switch to Pollinations AI base URL for this specific model
+                        activeClient = new Groq({ 
+                            apiKey: 'pollinations', 
+                            baseURL: 'https://gen.pollinations.ai/openai/v1' 
+                        });
+                    }
+
+                    const completion = await activeClient.chat.completions.create({
                         messages: messages,
                         model: model,
                         tools: dynamicTools,
@@ -302,7 +313,7 @@ module.exports = async function onMessageCreate(message) {
                             });
                         }
                         
-                        const secondCompletion = await groqClient.chat.completions.create({
+                        const secondCompletion = await activeClient.chat.completions.create({
                             messages: messages,
                             model: model
                         });
@@ -320,6 +331,7 @@ module.exports = async function onMessageCreate(message) {
                     console.error(`[Groq Error] Model ${model} failed:`, apiError.message);
                 }
             }
+
 
             if (!reply) {
                 return; // Suppress missing api error since it processes every msg

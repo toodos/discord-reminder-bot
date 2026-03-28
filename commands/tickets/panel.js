@@ -24,7 +24,12 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setColor(COLORS.pink)
                 .setTitle(title)
-                .setDescription(description)
+                .setDescription(
+                    `${description}\n\n` +
+                    `✦ ── ✦ ── ✦ ── ✦ ── ✦\n` +
+                    `*Click a button below to open a ticket!*`
+                )
+                .setFooter({ text: '🌸 We\'re happy to help  •  Oakawol Support' })
                 .setTimestamp();
 
             // Max 5 buttons per ActionRow
@@ -36,12 +41,12 @@ module.exports = {
                         .setCustomId(`ticket_open_${categories[i].id}`)
                         .setLabel(categories[i].name)
                         .setEmoji(categories[i].emoji)
-                        .setStyle(ButtonStyle.Secondary)
+                        .setStyle(ButtonStyle.Primary)
                 );
             }
 
             await channel.send({ embeds: [embed], components: rows });
-            await interaction.reply({ content: `✅ Panel created in ${channel}! ✨`, ephemeral: true });
+            await interaction.reply({ content: `✨ **Panel deployed** in ${channel}! It looks gorgeous~ 🌸`, ephemeral: true });
         }
     },
 };

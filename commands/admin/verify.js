@@ -51,10 +51,15 @@ async function verifyMessage(interaction, message) {
 
         const isReply = interaction.replied || interaction.deferred;
         const replyFn = isReply ? 'followUp' : 'reply';
-        const embed = new EmbedBuilder().setColor(COLORS.success).setTitle('✅ Verified').setDescription('Link verified and sent to status check!');
+        const embed = new EmbedBuilder()
+            .setColor(COLORS.success)
+            .setTitle('✨  Link Verified!')
+            .setDescription('This link has been manually verified and sent to status check! 🌸')
+            .setFooter({ text: '📌 Oakawol Bot  •  Verification System' })
+            .setTimestamp();
         await interaction[replyFn]({ embeds: [embed], ephemeral: true });
 
-        const botReply = await message.reply('🎀 Sent to Client! ✨🌸🌷');
+        const botReply = await message.reply('🌸 Verified & sent to the client! ✨💕');
         setTimeout(() => botReply.delete().catch(() => {}), 5000);
     } catch (err) {
         console.error('[Verify] Error:', err.message);

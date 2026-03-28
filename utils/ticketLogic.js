@@ -8,7 +8,7 @@ const {
 } = require('discord.js');
 const transcript = require('discord-html-transcripts');
 const db = require('./database');
-const { ticketWelcomeEmbed, COLORS } = require('./embeds');
+const { ticketWelcomeEmbed, COLORS, divider, footerQuip } = require('./embeds');
 
 async function createTicket(interaction, category, answers) {
     if (!interaction.deferred) await interaction.deferReply({ ephemeral: true });
@@ -58,14 +58,14 @@ async function createTicket(interaction, category, answers) {
     const embed = ticketWelcomeEmbed(interaction.user, paddedCount, category, answers);
 
     const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('ticket_claim').setLabel('👤 Claim').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('ticket_manage_users').setLabel('⚙️ Manage Users').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('ticket_close_prompt').setLabel('🔒 Close').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId('ticket_claim').setLabel('✦ Claim').setEmoji('👤').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('ticket_manage_users').setLabel('Manage Users').setEmoji('⚙️').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('ticket_close_prompt').setLabel('Close Ticket').setEmoji('🔒').setStyle(ButtonStyle.Danger),
     );
 
     const roleMention = staffRoles[0] ? `<@&${staffRoles[0]}>` : '';
     await channel.send({ content: `${interaction.user} ${roleMention}`.trim(), embeds: [embed], components: [row] });
-    await interaction.editReply({ content: `✅ Your ticket has been created! ${channel} 🎀` });
+    await interaction.editReply({ content: `✨ Your ticket is ready! Head over to ${channel} 🎀` });
 }
 
 async function claimTicket(interaction) {
@@ -95,13 +95,19 @@ async function claimTicket(interaction) {
 
 async function closePrompt(interaction) {
     const embed = new EmbedBuilder()
-        .setColor(COLORS.danger)
-        .setTitle('⚠️ Close Confirmation')
-        .setDescription('Are you sure you want to close this ticket? This will generate a final transcript and delete the channel.');
+        .setColor(COLORS.warning)
+        .setTitle('🔒  Close this Ticket?')
+        .setDescription(
+            `Are you sure you want to close this ticket?\n\n` +
+            `A full transcript will be generated and saved, then the channel will be deleted.\n\n` +
+            `*${divider()}*`
+        )
+        .setFooter({ text: '⏳ This action cannot be undone!' })
+        .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('ticket_close_confirm').setLabel('✅ Confirm').setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId('ticket_close_cancel').setLabel('✖️ Cancel').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('ticket_close_confirm').setLabel('Yes, Close It').setEmoji('🔒').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId('ticket_close_cancel').setLabel('Keep Open').setEmoji('🌸').setStyle(ButtonStyle.Secondary),
     );
 
     await interaction.reply({
@@ -120,8 +126,11 @@ async function closeTicket(interaction) {
     const config = db.getGuildConfig(interaction.guildId);
 
     const closingEmbed = new EmbedBuilder()
-        .setColor(COLORS.info)
-        .setDescription('🔒 **Closing ticket and generating transcript...**');
+        .setColor(COLORS.lilac ?? COLORS.info)
+        .setTitle('📄  Wrapping Up...')
+        .setDescription('🔒 Closing ticket and generating a beautiful transcript for your records~\n\n*Please wait a moment!* 🌸')
+        .setFooter({ text: footerQuip() })
+        .setTimestamp();
 
     await interaction.reply({ embeds: [closingEmbed] });
 
@@ -137,7 +146,7 @@ async function closeTicket(interaction) {
 
     db.updateTicket(interaction.channelId, { status: 'closed', closedAt: Date.now() });
 
-    const sendPayload = { content: `📋 Transcript for **${interaction.channel.name}**, closed by ${interaction.user}.` };
+    const sendPayload = { content: `🎀 Transcript for **${interaction.channel.name}** — closed by ${interaction.user}. ✨` };
     if (file) sendPayload.files = [file];
 
     // Log to log channel
@@ -156,7 +165,7 @@ async function closeTicket(interaction) {
     try {
         const opener = await interaction.client.users.fetch(ticket.userId);
         await opener.send({
-            content: `Your ticket **${interaction.channel.name}** has been closed. Here's your transcript! 🎀`,
+            content: `✨ Your ticket **${interaction.channel.name}** has been closed! Here's your transcript for reference. Thanks for reaching out~ 🌸🎀`,
             ...(file ? { files: [file] } : {}),
         });
     } catch { /* DMs may be closed */ }
@@ -171,8 +180,19 @@ async function manageUsers(interaction) {
         .setMinValues(0)
         .setMaxValues(10);
 
+    const manageEmbed = new EmbedBuilder()
+        .setColor(COLORS.sky ?? COLORS.info)
+        .setTitle('👥  Manage Ticket Access')
+        .setDescription(
+            `Select the users you want to **add** to this ticket below.\n` +
+            `Deselecting a user will **remove** their access.\n\n` +
+            `*${divider()}*`
+        )
+        .setFooter({ text: '🌸 Changes apply instantly!' })
+        .setTimestamp();
+
     await interaction.reply({
-        embeds: [new EmbedBuilder().setColor(COLORS.info).setTitle('👤 Manage User Access').setDescription('Select users to add to this ticket below. Unselecting a user will remove their access.')],
+        embeds: [manageEmbed],
         components: [new ActionRowBuilder().addComponents(select)],
         ephemeral: true,
     });
@@ -208,7 +228,10 @@ async function handleUserUpdate(interaction) {
 
     const successEmbed = new EmbedBuilder()
         .setColor(COLORS.success)
-        .setDescription(`✅ **Updated ticket access for ${selectedUsers.length} user(s).**`);
+        .setTitle('✅  Access Updated!')
+        .setDescription(`🌸 Successfully updated ticket access for **${selectedUsers.length}** user(s)!\n\n*${divider()}*`)
+        .setFooter({ text: footerQuip() })
+        .setTimestamp();
 
     await interaction.followUp({
         embeds: [successEmbed],

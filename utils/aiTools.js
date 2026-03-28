@@ -304,6 +304,312 @@ const aiToolDefinitions = [
                 required: ['name']
             }
         }
+    },
+    // ---- SERVER MANAGEMENT ----
+    {
+        type: 'function',
+        function: {
+            name: 'delete_channel',
+            description: 'Deletes a channel from the server by channel ID or the current channel if none specified.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    channelId: { type: 'string', description: 'The channel ID to delete. Leave empty to delete the current channel.' }
+                }
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'rename_channel',
+            description: 'Renames the current channel.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    name: { type: 'string', description: 'The new channel name' }
+                },
+                required: ['name']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'set_channel_topic',
+            description: 'Sets the topic/description of the current channel.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    topic: { type: 'string', description: 'The new channel topic' }
+                },
+                required: ['topic']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'create_role',
+            description: 'Creates a new role in the server with a given name and optional color.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    name: { type: 'string', description: 'Name of the role' },
+                    color: { type: 'string', description: 'Hex color (e.g. #FF5733). Optional.' }
+                },
+                required: ['name']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'assign_role',
+            description: 'Assigns an existing role to a server member by user ID and role name.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    userId: { type: 'string', description: 'The Discord user ID' },
+                    roleName: { type: 'string', description: 'The exact name of the role to assign' }
+                },
+                required: ['userId', 'roleName']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'remove_role',
+            description: 'Removes a role from a server member.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    userId: { type: 'string', description: 'The Discord user ID' },
+                    roleName: { type: 'string', description: 'The exact name of the role to remove' }
+                },
+                required: ['userId', 'roleName']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'unban_user',
+            description: 'Unbans a previously banned user from the server.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    userId: { type: 'string', description: 'The Discord user ID to unban.' }
+                },
+                required: ['userId']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_server_info',
+            description: 'Fetches info about the current server (member count, owner, boost level, etc).',
+            parameters: { type: 'object', properties: {} }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_roles',
+            description: 'Lists all roles in the server.',
+            parameters: { type: 'object', properties: {} }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_channels',
+            description: 'Lists all text channels in the server.',
+            parameters: { type: 'object', properties: {} }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'dm_user',
+            description: 'Sends a private Direct Message (DM) to a specific user.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    userId: { type: 'string', description: 'The Discord user ID' },
+                    content: { type: 'string', description: 'The message content to DM them' }
+                },
+                required: ['userId', 'content']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'send_to_channel',
+            description: 'Sends a message to a specific channel by ID (not the current one).',
+            parameters: {
+                type: 'object',
+                properties: {
+                    channelId: { type: 'string', description: 'The target channel ID' },
+                    content: { type: 'string', description: 'The message to send' }
+                },
+                required: ['channelId', 'content']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'pin_message',
+            description: 'Pins the most recent message in the current channel.',
+            parameters: { type: 'object', properties: {} }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'announce',
+            description: 'Sends a bolded @here announcement to the current channel.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    message: { type: 'string', description: 'The announcement message to send' }
+                },
+                required: ['message']
+            }
+        }
+    },
+    // ---- POLLS & FUN ----
+    {
+        type: 'function',
+        function: {
+            name: 'create_poll',
+            description: 'Creates a simple yes/no poll or multiple-choice reaction poll in the channel.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    question: { type: 'string', description: 'The poll question' },
+                    options: { type: 'string', description: 'Comma-separated options (up to 5). Leave empty for yes/no poll.' }
+                },
+                required: ['question']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'roll_dice',
+            description: 'Rolls one or more dice (e.g. 2d6, 1d20). Returns the result.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    dice: { type: 'string', description: 'Dice notation like 1d6, 2d20, 3d8. Default is 1d6.' }
+                }
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'pick_random',
+            description: 'Picks a random item from a list of provided choices.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    choices: { type: 'string', description: 'Comma-separated list of choices.' }
+                },
+                required: ['choices']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'coinflip',
+            description: 'Flips a virtual coin and returns Heads or Tails.',
+            parameters: { type: 'object', properties: {} }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_meme',
+            description: 'Fetches a random hot meme from Reddit to post in the chat.',
+            parameters: { type: 'object', properties: {} }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_weather',
+            description: 'Gets current weather info for a city using the open-meteo API (no key needed).',
+            parameters: {
+                type: 'object',
+                properties: {
+                    city: { type: 'string', description: 'The city name to get weather for (e.g. London, Tokyo)' }
+                },
+                required: ['city']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'translate_text',
+            description: 'Translates a piece of text to any language using the MyMemory free API.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    text: { type: 'string', description: 'The text to translate' },
+                    target_lang: { type: 'string', description: 'Target language code like EN, ES, FR, DE, JA, KO, AR' }
+                },
+                required: ['text', 'target_lang']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_minecraft_server',
+            description: 'Fetches info about a Minecraft Java server (online status, player count).',
+            parameters: {
+                type: 'object',
+                properties: {
+                    host: { type: 'string', description: 'The Minecraft server address (e.g. hypixel.net)' }
+                },
+                required: ['host']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'read_channel_history',
+            description: 'Reads the last N messages from the current channel and returns their content.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    count: { type: 'integer', description: 'How many recent messages to read (max 20)' }
+                }
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_user_avatar',
+            description: 'Fetches and posts the avatar/profile picture of a user.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    userId: { type: 'string', description: 'The Discord user ID' }
+                },
+                required: ['userId']
+            }
+        }
     }
 ];
 
@@ -478,6 +784,221 @@ async function executeTool(tName, args, message) {
                 const ageRes = await fetch(`https://api.agify.io?name=${name}`).then(r => r.json()).catch(() => null);
                 if (!ageRes || !ageRes.age) return `I couldn't find any stats for the name ${args.name}. 🧊`;
                 return `Based on my dataset, people named **${args.name}** are typically around **${ageRes.age}** years old! 🤯`;
+            }
+            // ---- SERVER MANAGEMENT ----
+            case 'delete_channel': {
+                const ch = args.channelId ? message.guild.channels.cache.get(args.channelId) : message.channel;
+                if (!ch) return `I couldn't find that channel. 🧊`;
+                await ch.delete();
+                return `Channel deleted successfully. 🗑️`;
+            }
+            case 'rename_channel': {
+                await message.channel.setName(args.name);
+                return `Channel renamed to **${args.name}**! ✏️`;
+            }
+            case 'set_channel_topic': {
+                await message.channel.setTopic(args.topic);
+                return `Channel topic set to: *${args.topic}* 📌`;
+            }
+            case 'create_role': {
+                const role = await message.guild.roles.create({ name: args.name, color: args.color || null });
+                return `Created new role **${role.name}**! 🎭`;
+            }
+            case 'assign_role': {
+                const member = await message.guild.members.fetch(args.userId).catch(() => null);
+                if (!member) return `I couldn't find that user. 🧊`;
+                const role = message.guild.roles.cache.find(r => r.name.toLowerCase() === args.roleName.toLowerCase());
+                if (!role) return `I couldn't find a role named **${args.roleName}**. 🧊`;
+                await member.roles.add(role);
+                return `Assigned **${role.name}** to <@${args.userId}>! ✅`;
+            }
+            case 'remove_role': {
+                const member = await message.guild.members.fetch(args.userId).catch(() => null);
+                if (!member) return `I couldn't find that user. 🧊`;
+                const role = message.guild.roles.cache.find(r => r.name.toLowerCase() === args.roleName.toLowerCase());
+                if (!role) return `I couldn't find a role named **${args.roleName}**. 🧊`;
+                await member.roles.remove(role);
+                return `Removed **${role.name}** from <@${args.userId}>! ✅`;
+            }
+            case 'unban_user': {
+                await message.guild.bans.remove(args.userId).catch(() => null);
+                return `<@${args.userId}> has been unbanned. 🕊️`;
+            }
+            case 'get_server_info': {
+                const g = message.guild;
+                await g.fetchOwner();
+                const embed = new EmbedBuilder()
+                    .setTitle(`📊 ${g.name}`)
+                    .setThumbnail(g.iconURL({ dynamic: true }))
+                    .addFields(
+                        { name: '👑 Owner', value: `<@${g.ownerId}>`, inline: true },
+                        { name: '👥 Members', value: `${g.memberCount}`, inline: true },
+                        { name: '✨ Boost Level', value: `${g.premiumTier}`, inline: true },
+                        { name: '📅 Created', value: `<t:${Math.floor(g.createdTimestamp / 1000)}:R>`, inline: true },
+                        { name: '🔧 Channels', value: `${g.channels.cache.size}`, inline: true },
+                        { name: '🎭 Roles', value: `${g.roles.cache.size}`, inline: true }
+                    )
+                    .setColor('#5865F2');
+                await message.channel.send({ embeds: [embed] });
+                return `Here is the server info!`;
+            }
+            case 'list_roles': {
+                const roles = message.guild.roles.cache
+                    .filter(r => r.id !== message.guild.id)
+                    .sort((a, b) => b.position - a.position)
+                    .map(r => `• **${r.name}** (${r.members.size} members)`)
+                    .slice(0, 20);
+                const embed = new EmbedBuilder().setTitle('🎭 Server Roles').setDescription(roles.join('\n')).setColor('#FFB6C1');
+                await message.channel.send({ embeds: [embed] });
+                return `Listed ${roles.length} roles!`;
+            }
+            case 'list_channels': {
+                const channels = message.guild.channels.cache
+                    .filter(c => c.isTextBased())
+                    .map(c => `• <#${c.id}> — ${c.name}`)
+                    .slice(0, 20);
+                const embed = new EmbedBuilder().setTitle('📋 Text Channels').setDescription(channels.join('\n')).setColor('#5865F2');
+                await message.channel.send({ embeds: [embed] });
+                return `Listed ${channels.length} text channels!`;
+            }
+            case 'dm_user': {
+                const user = await message.client.users.fetch(args.userId).catch(() => null);
+                if (!user) return `I couldn't find that user. 🧊`;
+                await user.send(args.content).catch(() => null);
+                return `📬 DM sent to <@${args.userId}>!`;
+            }
+            case 'send_to_channel': {
+                const ch = message.guild.channels.cache.get(args.channelId);
+                if (!ch) return `I couldn't find that channel. 🧊`;
+                await ch.send(args.content);
+                return `✅ Message sent to <#${args.channelId}>!`;
+            }
+            case 'pin_message': {
+                const msgs = await message.channel.messages.fetch({ limit: 2 });
+                const target = msgs.find(m => m.id !== message.id);
+                if (!target) return `No message to pin. 🧊`;
+                await target.pin();
+                return `📌 Message pinned!`;
+            }
+            case 'announce': {
+                await message.channel.send(`@here\n\n📣 **ANNOUNCEMENT**\n\n${args.message}`);
+                return `Announcement sent! 📣`;
+            }
+            // ---- POLLS & FUN ----
+            case 'create_poll': {
+                const opts = args.options ? args.options.split(',').map(o => o.trim()).filter(Boolean).slice(0, 5) : null;
+                const numberEmojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣'];
+                const embed = new EmbedBuilder()
+                    .setTitle(`📊 Poll: ${args.question}`)
+                    .setColor('#FFB6C1')
+                    .setFooter({ text: 'React below to vote!' });
+                if (opts && opts.length > 1) {
+                    embed.setDescription(opts.map((o, i) => `${numberEmojis[i]} ${o}`).join('\n'));
+                } else {
+                    embed.setDescription('React with ✅ for Yes or ❌ for No!');
+                }
+                const pollMsg = await message.channel.send({ embeds: [embed] });
+                if (opts && opts.length > 1) {
+                    for (let i = 0; i < opts.length; i++) await pollMsg.react(numberEmojis[i]);
+                } else {
+                    await pollMsg.react('✅');
+                    await pollMsg.react('❌');
+                }
+                return `Poll created! 🗳️`;
+            }
+            case 'roll_dice': {
+                const notation = (args.dice || '1d6').toLowerCase();
+                const match = notation.match(/^(\d+)d(\d+)$/);
+                if (!match) return `Invalid dice notation. Use formats like 1d6, 2d20, 3d8. 🧊`;
+                const count = Math.min(parseInt(match[1]), 20);
+                const sides = parseInt(match[2]);
+                const rolls = Array.from({ length: count }, () => Math.floor(Math.random() * sides) + 1);
+                const total = rolls.reduce((a, b) => a + b, 0);
+                return `🎲 Rolled **${notation}**: [${rolls.join(', ')}] = **${total}**`;
+            }
+            case 'pick_random': {
+                const choices = args.choices.split(',').map(c => c.trim()).filter(Boolean);
+                if (choices.length === 0) return `No choices given! 🧊`;
+                const pick = choices[Math.floor(Math.random() * choices.length)];
+                return `🎯 I pick: **${pick}**`;
+            }
+            case 'coinflip': {
+                const result = Math.random() < 0.5 ? 'Heads 🪙' : 'Tails 🪙';
+                return `I flipped a coin... it's **${result}**!`;
+            }
+            case 'get_meme': {
+                const res = await fetch('https://www.reddit.com/r/memes/hot.json?limit=25').then(r => r.json()).catch(() => null);
+                if (!res?.data?.children) return `Couldn't load memes right now. 🧊`;
+                const posts = res.data.children.filter(p => p.data.url.match(/\.(jpg|png|gif)$/i));
+                if (!posts.length) return `No image memes found. 🧊`;
+                const post = posts[Math.floor(Math.random() * posts.length)].data;
+                const embed = new EmbedBuilder().setTitle(post.title).setImage(post.url).setURL(`https://reddit.com${post.permalink}`).setColor('#FF4500');
+                await message.channel.send({ embeds: [embed] });
+                return `Meme deployed! 😂`;
+            }
+            case 'get_weather': {
+                const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(args.city)}&count=1`).then(r => r.json()).catch(() => null);
+                if (!geoRes?.results?.[0]) return `I couldn't find the city "${args.city}". 🧊`;
+                const { latitude, longitude, name, country } = geoRes.results[0];
+                const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m`).then(r => r.json()).catch(() => null);
+                if (!weatherRes?.current) return `Couldn't fetch weather data. 🧊`;
+                const c = weatherRes.current;
+                const codes = { 0:'☀️ Clear', 1:'🌤️ Mainly Clear', 2:'⛅ Partly Cloudy', 3:'☁️ Overcast', 45:'🌫️ Foggy', 48:'🌫️ Icy Fog', 51:'🌦️ Light Drizzle', 61:'🌧️ Light Rain', 63:'🌧️ Moderate Rain', 65:'🌧️ Heavy Rain', 71:'🌨️ Snow', 80:'🌦️ Showers', 95:'⛈️ Thunderstorm' };
+                const condition = codes[c.weathercode] || `Code ${c.weathercode}`;
+                const embed = new EmbedBuilder()
+                    .setTitle(`🌍 Weather in ${name}, ${country}`)
+                    .addFields(
+                        { name: 'Condition', value: condition, inline: true },
+                        { name: '🌡️ Temperature', value: `${c.temperature_2m}°C`, inline: true },
+                        { name: '💧 Humidity', value: `${c.relativehumidity_2m}%`, inline: true },
+                        { name: '💨 Wind Speed', value: `${c.windspeed_10m} km/h`, inline: true }
+                    )
+                    .setColor('#87CEEB');
+                await message.channel.send({ embeds: [embed] });
+                return `Weather data retrieved!`;
+            }
+            case 'translate_text': {
+                const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(args.text)}&langpair=en|${args.target_lang}`).then(r => r.json()).catch(() => null);
+                if (!res?.responseData?.translatedText) return `Translation failed. 🧊`;
+                return `🌐 **Translation (→${args.target_lang}):**\n${res.responseData.translatedText}`;
+            }
+            case 'get_minecraft_server': {
+                const res = await fetch(`https://api.mcsrvstat.us/2/${encodeURIComponent(args.host)}`).then(r => r.json()).catch(() => null);
+                if (!res) return `Couldn't query that server. 🧊`;
+                if (!res.online) return `🔴 **${args.host}** is **offline** or not a valid server.`;
+                const embed = new EmbedBuilder()
+                    .setTitle(`⛏️ ${args.host}`)
+                    .addFields(
+                        { name: '🟢 Status', value: 'Online', inline: true },
+                        { name: '👥 Players', value: `${res.players?.online ?? 0}/${res.players?.max ?? 0}`, inline: true },
+                        { name: '🏷️ Version', value: res.version || 'Unknown', inline: true },
+                        { name: '📝 MOTD', value: res.motd?.clean?.[0] || 'None', inline: false }
+                    )
+                    .setColor('#5c8a00');
+                await message.channel.send({ embeds: [embed] });
+                return `Server info retrieved!`;
+            }
+            case 'read_channel_history': {
+                const count = Math.min(args.count || 10, 20);
+                const msgs = await message.channel.messages.fetch({ limit: count + 1 });
+                const history = [...msgs.values()]
+                    .filter(m => m.id !== message.id)
+                    .slice(0, count)
+                    .reverse()
+                    .map(m => `[${m.author.username}]: ${m.content || '(embed/attachment)'}`)
+                    .join('\n');
+                return `Here are the last ${count} messages:\n\`\`\`\n${history}\n\`\`\``;
+            }
+            case 'get_user_avatar': {
+                const user = await message.client.users.fetch(args.userId).catch(() => null);
+                if (!user) return `I couldn't find that user. 🧊`;
+                const avatarUrl = user.displayAvatarURL({ size: 512, extension: 'png' });
+                const embed = new EmbedBuilder()
+                    .setTitle(`🖼️ ${user.username}'s Avatar`)
+                    .setImage(avatarUrl)
+                    .setColor('#FFB6C1');
+                await message.channel.send({ embeds: [embed] });
+                return `Avatar displayed!`;
             }
             default:
                 return `I tried to use a tool but didn't recognize it.`;
