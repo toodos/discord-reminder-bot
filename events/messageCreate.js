@@ -11,9 +11,10 @@ const { aiToolDefinitions, executeTool } = require('../utils/aiTools');
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
 const OPENROUTER_MODELS = [
-    'google/gemini-2.0-flash-lite-preview-02-05:free', // Extremely fast
-    'meta-llama/llama-3.1-8b-instruct:free',
-    'mistralai/mistral-7b-instruct:free'
+    'meta-llama/llama-3.3-70b-instruct:free',    // Powerful 70B model
+    'google/gemma-3-27b-it:free',                // Google's latest Gemma 3
+    'nousresearch/hermes-3-llama-3.1-405b:free', // Frontier-level 405B
+    'meta-llama/llama-3.2-3b-instruct:free'      // Fast lightweight
 ];
 
 const POLLINATIONS_MODELS = [
