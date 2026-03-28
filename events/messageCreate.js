@@ -124,12 +124,8 @@ module.exports = async function onMessageCreate(message) {
     }
 
     if (isChatRequest) {
-        if (!groqClient) {
-            if (process.env.GROQ_API_KEY) {
-                groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
-            } else {
-                return message.reply("I am not configured with a Groq API key yet! Please set `GROQ_API_KEY` in the `.env` file.").catch(() => {});
-            }
+        if (!process.env.POLLINATIONS_API_KEY) {
+            return message.reply("I am not configured with a Pollinations API key yet! Please set `POLLINATIONS_API_KEY` in the `.env` file.").catch(() => {});
         }
 
         const prompt = message.content.replace(new RegExp(`<@!?${message.client.user.id}>`, 'g'), '').trim();
@@ -312,11 +308,23 @@ module.exports = async function onMessageCreate(message) {
                             });
                         }
                         
-                        const secondCompletion = await activeClient.chat.completions.create({
-                            messages: messages,
-                            model: model
+                        const secondResponse = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${process.env.POLLINATIONS_API_KEY}`
+                            },
+                            body: JSON.stringify({
+                                model: model,
+                                messages: messages
+                            })
                         });
                         
+                        if (!secondResponse.ok) {
+                            throw new Error(`Pollinations API second call failed: ${secondResponse.status}`);
+                        }
+                        
+                        const secondCompletion = await secondResponse.json();
                         reply = secondCompletion.choices[0]?.message?.content;
                         if (executedSilently && (!reply || reply.trim() === '')) {
                             reply = "COMMAND_EXECUTED_SILENTLY";
@@ -345,7 +353,7 @@ module.exports = async function onMessageCreate(message) {
             }
             return message.reply(reply).catch(() => {});
         } catch (error) {
-            console.error('[Groq Unexpected Error]', error);
+            console.error('[AI Unexpected Error]', error);
         }
     }
 };
