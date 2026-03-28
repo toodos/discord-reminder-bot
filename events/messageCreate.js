@@ -9,15 +9,15 @@ const { aiToolDefinitions, executeTool } = require("../utils/aiTools");
 
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
-// Primary: openai (most stable, full tool support)
-// claude-fast: fast Claude, great tool support
-// mistral: reliable European fallback
+// Primary: mistral (fast, reliable, great tool support)
+// openai: GPT-4o class fallback
+// claude-fast: fast Claude fallback
 // gemini-fast: capable but prone to 502 gateway errors — kept as late fallback
 // qwen-safety: text-only guard model, absolute last resort
 const POLLINATIONS_MODELS = [
-  { model: "openai", supportsTools: true }, // GPT-4o class — primary
-  { model: "claude-fast", supportsTools: true }, // Claude Haiku — fast & reliable
-  { model: "mistral", supportsTools: true }, // Mistral — solid fallback
+  { model: "mistral", supportsTools: true }, // Mistral — primary
+  { model: "openai", supportsTools: true }, // GPT-4o class — fallback
+  { model: "claude-fast", supportsTools: true }, // Claude Haiku — fallback
   { model: "gemini-fast", supportsTools: true }, // Gemini Flash — flaky, last tool attempt
   { model: "qwen-safety", supportsTools: false }, // text-only guard — absolute last resort
 ];
