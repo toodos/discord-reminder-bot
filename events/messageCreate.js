@@ -10,8 +10,10 @@ const { aiToolDefinitions, executeTool } = require('../utils/aiTools');
 
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
-const POLLINATIONS_MODELS = [
-    'qwen-safety' // Qwen3Guard 8B (Requested for efficiency)
+const OPENROUTER_MODELS = [
+    'google/gemini-2.0-flash-lite-preview-02-05:free', // Fastest free model
+    'meta-llama/llama-3.1-8b-instruct:free',
+    'mistralai/mistral-7b-instruct:free'
 ];
 
 module.exports = async function onMessageCreate(message) {
@@ -121,8 +123,8 @@ module.exports = async function onMessageCreate(message) {
     }
 
     if (isChatRequest) {
-        if (!process.env.POLLINATIONS_API_KEY) {
-            return message.reply("I am not configured with a Pollinations API key yet! Please set `POLLINATIONS_API_KEY` in the `.env` file.").catch(() => {});
+        if (!process.env.OPENROUTER_API_KEY) {
+            return message.reply("I am not configured with an OpenRouter API key yet! Please set `OPENROUTER_API_KEY` in the `.env` file.").catch(() => {});
         }
 
         const prompt = message.content.replace(new RegExp(`<@!?${message.client.user.id}>`, 'g'), '').trim();
@@ -155,19 +157,21 @@ module.exports = async function onMessageCreate(message) {
                 }
             }
 
-            for (const model of POLLINATIONS_MODELS) {
+            for (const model of OPENROUTER_MODELS) {
                 try {
                     const messages = [
                         { role: 'system', content: 'You are an autonomous AI Discord agent named Oakawol Bot. Note: users will tag people as <@123456789>, extract the 123456789 part to use as userId. If a tool fails to find what the user asked for, you MUST use your own internal AI knowledge to try answering anyway. Answer concisely. IMPORTANT: When using tools, you MUST return a valid JSON tool_call object. DO NOT output your own tags or raw text before the tool call. ONLY use tools explicitly provided in this request.' },
                         { role: 'user', content: prompt }
                     ];
 
-                    // Use native fetch to hit Pollinations OpenAI compatibility endpoint
-                    const response = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
+                    // Use native fetch to hit OpenRouter API
+                    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                         method: 'POST',
                         headers: { 
                             'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${process.env.POLLINATIONS_API_KEY}`
+                            'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                            'HTTP-Referer': 'https://github.com/toodos/discord-reminder-bot',
+                            'X-Title': 'Oakawol Bot'
                         },
                         body: JSON.stringify({
                             model: model,
@@ -305,11 +309,13 @@ module.exports = async function onMessageCreate(message) {
                             });
                         }
                         
-                        const secondResponse = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
+                        const secondResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                             method: 'POST',
                             headers: { 
                                 'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${process.env.POLLINATIONS_API_KEY}`
+                                'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                                'HTTP-Referer': 'https://github.com/toodos/discord-reminder-bot',
+                                'X-Title': 'Oakawol Bot'
                             },
                             body: JSON.stringify({
                                 model: model,
