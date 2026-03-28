@@ -9,13 +9,13 @@ const { aiToolDefinitions, executeTool } = require('../utils/aiTools');
 
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
-// Primary: nova-fast (Amazon Nova Micro) - fast & supports tools
-// Fallbacks: openai, mistral (tool support), qwen-safety (text only)
+// Primary: openai (most reliable, supports tools, fewer false positives)
+// Fallbacks: nova-fast, mistral, qwen-safety (text only)
 const POLLINATIONS_MODELS = [
-    { model: 'nova-fast', supportsTools: true },   // Amazon Nova Micro - primary
-    { model: 'openai', supportsTools: true },        // GPT-4o fallback
-    { model: 'mistral', supportsTools: true },       // Mistral fallback
-    { model: 'qwen-safety', supportsTools: false },  // guard model - text only
+    { model: 'openai', supportsTools: true },        // GPT-4o - primary
+    { model: 'mistral', supportsTools: true },        // Mistral fallback
+    { model: 'nova-fast', supportsTools: true },      // Amazon Nova Micro fallback
+    { model: 'qwen-safety', supportsTools: false },   // guard model - text only, last resort
 ];
 
 module.exports = async function onMessageCreate(message) {
@@ -168,22 +168,16 @@ module.exports = async function onMessageCreate(message) {
         for (const { model, supportsTools } of POLLINATIONS_MODELS) {
             try {
                 const messages = [
-                    { role: 'system', content: `You are Oakawol Bot, an autonomous AI Discord server assistant. You MUST use the provided tools to execute actions — never say you can't do something if a tool exists for it.
+                    { role: 'system', content: `You are Oakawol Bot, a helpful Discord server assistant. Always use the tools provided — never refuse an action if a matching tool exists.
 
-KEY COMMANDS YOU HAVE ACCESS TO (call them via their cmd_ tool):
-- cmd_add_money: Add coins to a user. args format: "<amount> <@userId or userId>"
-- cmd_remove_money: Remove coins from a user. args format: "<amount> <@userId or userId>"
-- cmd_balance: Check a user's coin balance. args format: "<@userId or userId>"
-- cmd_imagine: Generate an image. args format: "<prompt text>"
-- cmd_remind: Set a reminder. args format: "<time like 10m or 2h> <message>"
+Available bot commands (use via cmd_ tools):
+- cmd_add_money / cmd_remove_money: Manage a user's server balance. Pass args as "<number> <userId>"
+- cmd_balance: View a user's balance. Pass args as "<userId>"
+- cmd_imagine: Create AI art. Pass args as the image description.
+- cmd_remind: Schedule a reminder. Pass args as "<duration> <note>" (e.g. "10m check oven")
 
-RULES:
-- When a user says "remove X coins from @someone", use cmd_remove_money immediately.
-- When a user says "add X coins to @someone", use cmd_add_money immediately.
-- Users are tagged as <@123456789> — pass the raw user ID or the full mention in args.
-- NEVER say you cannot do something if a tool exists for it.
-- Strip any internal reasoning from your reply — only output the final answer.
-- Be concise and friendly. 🌸` },
+Always extract the user's Discord ID from mentions like <@123456789> and include it in args.
+Reply concisely and friendly. Do not include any reasoning or thinking in your response.` },
                     { role: 'user', content: prompt }
                 ];
 
