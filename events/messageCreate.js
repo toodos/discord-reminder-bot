@@ -1,7 +1,7 @@
 /**
  * events/messageCreate.js
  * Handles link detection inside ticket channels and AI chat.
- * Primary engine: Cerebras  |  Fallback: Groq  |  Images: Pollinations
+ * Primary engine: Pollinations  |  Fallback: None (multi-model)  |  Images: Pollinations
  */
 const { PermissionFlagsBits, EmbedBuilder } = require("discord.js");
 const db = require("../utils/database");
@@ -10,28 +10,23 @@ const { aiToolDefinitions, executeTool } = require("../utils/aiTools");
 
 const URL_REGEX = /https?:\/\/[^\s]+/;
 
-// Primary provider: Cerebras (ultra-fast inference)
-// Fallback provider: Groq
+// Provider: Pollinations (Unified OpenAI-compatible API)
 // Models are tried in order; providers whose API key is missing are skipped.
 const AI_MODELS = [
-  { provider: "cerebras", model: "qwen-3-235b-a22b-instruct-2507", supportsTools: true  }, // Cerebras primary (large)
-  { provider: "cerebras", model: "llama3.1-8b",                    supportsTools: true  }, // Cerebras fast fallback
-  { provider: "groq",     model: "llama-3.3-70b-versatile",        supportsTools: true  }, // Groq primary
-  { provider: "groq",     model: "llama-3.1-8b-instant",           supportsTools: true  }, // Groq fast fallback
-  { provider: "groq",     model: "gemma2-9b-it",                   supportsTools: false }, // Groq last resort
+  { provider: "pollinations", model: "openai",      supportsTools: true  }, // GPT-4o
+  { provider: "pollinations", model: "openai-fast", supportsTools: true  }, // GPT-4o-mini
+  { provider: "pollinations", model: "gemini-fast", supportsTools: true  }, // Gemini Flash
+  { provider: "pollinations", model: "claude-fast", supportsTools: true  }, // Claude 3.5 Haiku
 ];
 
 function getProviderConfig(provider) {
-  if (provider === "cerebras") {
+  if (provider === "pollinations") {
     return {
-      url: "https://api.cerebras.ai/v1/chat/completions",
-      key: process.env.CEREBRAS_API_KEY,
+      url: "https://gen.pollinations.ai/v1/chat/completions",
+      key: process.env.POLLINATIONS_API_KEY,
     };
   }
-  return {
-    url: "https://api.groq.com/openai/v1/chat/completions",
-    key: process.env.GROQ_API_KEY,
-  };
+  return { url: null, key: null };
 }
 
 module.exports = async function onMessageCreate(message) {
@@ -155,11 +150,11 @@ module.exports = async function onMessageCreate(message) {
 
   if (!isChatRequest) return;
 
-  // ----- AI CHAT HANDLER (Cerebras primary, Groq fallback) -----
-  if (!process.env.CEREBRAS_API_KEY && !process.env.GROQ_API_KEY) {
+  // ----- AI CHAT HANDLER (Pollinations only) -----
+  if (!process.env.POLLINATIONS_API_KEY) {
     return message
       .reply(
-        "I'm not configured with an AI API key! Please set `CEREBRAS_API_KEY` and/or `GROQ_API_KEY` in the `.env` file.",
+        "I'm not configured with a Pollinations AI API key! Please set `POLLINATIONS_API_KEY` in the `.env` file.",
       )
       .catch(() => {});
   }
@@ -477,9 +472,7 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
         if (reply) break;
       } catch (err) {
         const providerTag = provider.charAt(0).toUpperCase() + provider.slice(1);
-        const knownApiErr =
-          err.message.includes("Cerebras API failed") ||
-          err.message.includes("Groq API failed");
+        const knownApiErr = err.message.includes("Pollinations API failed");
         if (!knownApiErr) {
           console.error(
             `[${providerTag}] ❌ Unexpected error with model ${model}:`,
