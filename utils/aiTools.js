@@ -610,6 +610,44 @@ const aiToolDefinitions = [
                 required: ['userId']
             }
         }
+    },
+    // ---- MEMORY TOOLS ----
+    {
+        type: 'function',
+        function: {
+            name: 'set_memory',
+            description: 'Stores a piece of information in the long-term memory. Use this to remember user details, facts, or instructions.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    slot: { type: 'integer', description: 'The memory slot index (0 to 99). Use different slots for different facts.' },
+                    message: { type: 'string', description: 'The information to remember.' }
+                },
+                required: ['slot', 'message']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_memory',
+            description: 'Retrieves a piece of information from a specific memory slot.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    slot: { type: 'integer', description: 'The memory slot index to retrieve (0 to 99).' }
+                },
+                required: ['slot']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_memory',
+            description: 'Lists all currently stored memories and their slot numbers.',
+            parameters: { type: 'object', properties: {} }
+        }
     }
 ];
 
@@ -997,6 +1035,26 @@ async function executeTool(tName, args, message) {
                     .setColor('#FFB6C1');
                 await message.channel.send({ embeds: [embed] });
                 return `Avatar displayed!`;
+            }
+            // ---- MEMORY TOOLS ----
+            case 'set_memory': {
+                const db = require('./database');
+                db.setMemory(args.slot, args.message);
+                return `Done! I've saved that information to memory slot #${args.slot}. 🧠`;
+            }
+            case 'get_memory': {
+                const db = require('./database');
+                const mem = db.getMemory(args.slot);
+                if (!mem) return `Memory slot #${args.slot} is currently empty. 🧊`;
+                return `Here's what I remember in slot #${args.slot}:\n\n${mem}`;
+            }
+            case 'list_memory': {
+                const db = require('./database');
+                const all = db.getAllMemory();
+                const keys = Object.keys(all);
+                if (keys.length === 0) return `My long-term memory is currently empty. 🌱`;
+                const list = keys.map(slot => `• **Slot ${slot}**: ${all[slot].substring(0, 50)}${all[slot].length > 50 ? '...' : ''}`).join('\n');
+                return `Here are my stored memories:\n\n${list}`;
             }
             default:
                 return `I tried to use a tool but didn't recognize it.`;

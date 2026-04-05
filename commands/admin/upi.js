@@ -2,10 +2,11 @@
  * commands/admin/upi.js
  * Save & lookup UPI IDs + QR codes per user per guild.
  */
-const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
-const { PermissionFlagsBits } = require('discord.js');
+const { EmbedBuilder, AttachmentBuilder, PermissionFlagsBits } = require('discord.js');
 const db = require('../../utils/database');
 const { COLORS, divider, footerQuip, errorEmbed } = require('../../utils/embeds');
+const fs = require('fs');
+const path = require('path');
 
 module.exports = {
     name: 'upi',
@@ -28,9 +29,24 @@ module.exports = {
                 return interaction.reply({ embeds: [errorEmbed('That doesn\'t look like a valid UPI ID! It should contain `@` (e.g. `name@upi`). 🌸')], ephemeral: true });
             }
 
-            const qrUrl = attachment ? attachment.url : null;
+            let qrFilename = null;
+            if (attachment) {
+                const ext = attachment.name.split('.').pop() || 'png';
+                qrFilename = `qr_${targetUser.id}_${interaction.guildId}.${ext}`;
+                const qrPath = path.join(__dirname, '../../assets/qr', qrFilename);
+                
+                try {
+                    const res = await fetch(attachment.url);
+                    if (!res.ok) throw new Error(`Failed to fetch QR code: ${res.statusText}`);
+                    const buffer = await res.arrayBuffer();
+                    fs.writeFileSync(qrPath, Buffer.from(buffer));
+                } catch (err) {
+                    console.error('[UPI Error] Failed to save QR code:', err);
+                    return interaction.reply({ embeds: [errorEmbed('Failed to save the QR code image locally! 🧊')], ephemeral: true });
+                }
+            }
 
-            db.setUpi(targetUser.id, interaction.guildId, upiId, qrUrl);
+            db.setUpi(targetUser.id, interaction.guildId, upiId, qrFilename);
 
             const embed = new EmbedBuilder()
                 .setColor(COLORS.mint)
@@ -47,9 +63,15 @@ module.exports = {
                 .setFooter({ text: footerQuip() })
                 .setTimestamp();
 
-            if (qrUrl) embed.setImage(qrUrl);
+            const files = [];
+            if (qrFilename) {
+                const qrPath = path.join(__dirname, '../../assets/qr', qrFilename);
+                const file = new AttachmentBuilder(qrPath, { name: qrFilename });
+                embed.setImage(`attachment://${qrFilename}`);
+                files.push(file);
+            }
 
-            return interaction.reply({ embeds: [embed] });
+            return interaction.reply({ embeds: [embed], files });
         }
 
         // ── GET ───────────────────────────────────────────────────────────────
@@ -80,14 +102,26 @@ module.exports = {
                 .setFooter({ text: `💖 Tap UPI ID to copy  •  ${footerQuip()}` })
                 .setTimestamp();
 
+            const files = [];
             if (record.qrUrl) {
-                embed.setImage(record.qrUrl);
+                if (record.qrUrl.startsWith('http')) {
+                    // Legacy support for hosted URLs
+                    embed.setImage(record.qrUrl);
+                } else {
+                    // Local file
+                    const qrPath = path.join(__dirname, '../../assets/qr', record.qrUrl);
+                    if (fs.existsSync(qrPath)) {
+                        const file = new AttachmentBuilder(qrPath, { name: record.qrUrl });
+                        embed.setImage(`attachment://${record.qrUrl}`);
+                        files.push(file);
+                    }
+                }
                 embed.addFields({ name: '🖼️  QR Code', value: 'Shown below — scan to pay!', inline: false });
             } else {
                 embed.addFields({ name: '🖼️  QR Code', value: '*No QR code saved yet.*', inline: false });
             }
 
-            return interaction.reply({ embeds: [embed] });
+            return interaction.reply({ embeds: [embed], files });
         }
 
         // ── DELETE ────────────────────────────────────────────────────────────
