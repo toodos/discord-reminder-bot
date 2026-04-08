@@ -13,8 +13,8 @@ const URL_REGEX = /https?:\/\/[^\s]+/;
 // Provider: Pollinations (Unified OpenAI-compatible API)
 // Models are tried in order; providers whose API key is missing are skipped.
 const AI_MODELS = [
-  { provider: "pollinations", model: "openai",      supportsTools: true  }, // GPT-4o
   { provider: "pollinations", model: "openai-fast", supportsTools: true  }, // GPT-4o-mini
+  { provider: "pollinations", model: "openai",      supportsTools: true  }, // GPT-4o
   { provider: "pollinations", model: "gemini-fast", supportsTools: true  }, // Gemini Flash
   { provider: "pollinations", model: "claude-fast", supportsTools: true  }, // Claude 3.5 Haiku
 ];
