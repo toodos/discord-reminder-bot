@@ -184,20 +184,6 @@ const aiToolDefinitions = [
     {
         type: 'function',
         function: {
-            name: 'search_wikipedia',
-            description: 'Searches Wikipedia for a query and returns the summary.',
-            parameters: {
-                type: 'object',
-                properties: {
-                    query: { type: 'string', description: 'What to search for' }
-                },
-                required: ['query']
-            }
-        }
-    },
-    {
-        type: 'function',
-        function: {
             name: 'get_random_joke',
             description: 'Fetches a random joke to tell the user.',
             parameters: { type: 'object', properties: {} }
@@ -742,12 +728,7 @@ async function executeTool(tName, args, message) {
                 const posts = res.data.children.map(p => `**${p.data.title}**\n<https://reddit.com${p.data.permalink}>`).join('\n\n');
                 return `Here are the top posts from r/${args.subreddit}:\n\n${posts}`;
             }
-            case 'search_wikipedia': {
-                const query = encodeURIComponent(args.query);
-                const res = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${query}&limit=1&format=json`).then(r => r.json()).catch(() => null);
-                if (!res || !res[1] || !res[1][0]) return `I couldn't find anything on Wikipedia for "${args.query}". 🧊`;
-                return `Here's what I found on Wikipedia for **${res[1][0]}**:\n${res[3][0]}`;
-            }
+
             case 'get_random_joke': {
                 const res = await fetch(`https://official-joke-api.appspot.com/random_joke`).then(r => r.json()).catch(() => null);
                 if (!res) return `I forgot the joke I was going to tell... 🧊`;
