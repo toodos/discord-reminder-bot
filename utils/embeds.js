@@ -1,22 +1,22 @@
 /**
  * utils/embeds.js
- * ♡ Centralized embed factories — cute, alive, and full of personality.
+ * ⚡ Centralized embed factories — neon, digital, and cyberpunk.
  */
 const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
 const path = require("path");
 
 // ── Palette ──────────────────────────────────────────────────────────────────
 const COLORS = {
-  success: 0x98f5a0, // soft mint green
-  danger: 0xff6b8a, // bubblegum pink-red
-  warning: 0xffd580, // warm pastel yellow
-  info: 0xa78bfa, // lavender purple
-  pink: 0xff85c2, // hot blossom pink
-  gold: 0xffd166, // warm honey gold
-  mint: 0x70e0c0, // fresh aqua mint
-  sky: 0x7ec8e3, // dreamy sky blue
-  peach: 0xffab7b, // soft peach
-  lilac: 0xc9a7eb, // gentle lilac
+  success: 0x00ffcc, // neon cyan
+  danger: 0xff003c, // electric crimson
+  warning: 0xffbf00, // amber phosphor
+  info: 0x0088ff, // deep link blue
+  pink: 0xff00ff, // hot magenta
+  gold: 0xffd700, // cyber gold
+  mint: 0x39ff14, // toxic green
+  sky: 0x00f0ff, // terminal cyan
+  peach: 0xff5e00, // overdrive orange
+  lilac: 0x9d00ff, // synthwave purple
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -24,33 +24,33 @@ function asset(name) {
   return new AttachmentBuilder(path.join(__dirname, `../assets/${name}`));
 }
 
-/** A sparkly section divider */
+/** A digital interface divider */
 function divider() {
-  return "✦ ── ✦ ── ✦ ── ✦ ── ✦";
+  return "⚡ ── ⚡ ── ⚡ ── ⚡ ── ⚡";
 }
 
-/** Pick a random cute closing footer message */
+/** Pick a random cyber closing footer message */
 const FOOTER_QUIPS = [
-  "♡ Oakawol Bot thinks you're absolutely wonderful~",
-  "✨ Sprinkling fresh stardust on your whole entire day!",
-  "🌸 Blooming with joy right alongside you~",
-  "☁️ Fluffier than a cloud, softer than a wish!",
-  "🍓 Stay sweet, stay magical, stay perfectly you~",
-  "💖 Powered by love, fairy dust, and good vibes only!",
-  "🌙 Wishing you the coziest, dreamiest night ever~",
-  "🎀 Wrapped up with a ribbon — made just for you!",
-  "🌷 Growing more sparkly with every passing moment~",
-  "🍵 Remember to drink water and take little breaks ♡",
-  "🧁 You deserve every cupcake in the whole wide world~",
-  "⭐ You are doing SO amazingly, sweetie, keep going!",
-  "🦋 Every single moment is a brand new beginning~",
-  "🌈 Sending pure rainbow energy directly your way!",
-  "🪄 A little sprinkle of magic goes such a long way~",
-  "🍡 Life is sweeter when you share it with friends!",
-  "💫 Keep shining bright, my darling little starlight~",
-  "🌻 The sun always finds its way back out, I promise!",
-  "🎶 Humming the happiest little tune just for you today!",
-  "🐰 Hopping along and making today just a tiny bit cuter!",
+  "⚡ Oakawol System AI operating at 100% capacity.",
+  "🌐 Data streams synchronized across all nodes.",
+  "💾 Memories successfully written to the mainframe.",
+  "🔧 Cybernetic systems calibrated.",
+  "🔋 Energy reserves optimal.",
+  "🌌 Navigating the outer limits of the net.",
+  "👾 Glitches patched, protocols enforced.",
+  "📡 Signal established. Connection secure.",
+  "💻 Bypassing local firewalls...",
+  "🗑️ Cached data cleared.",
+  "⚙️ Maintenance subroutines active.",
+  "🔗 Encrypted network handshake successful.",
+  "🚀 Thrusters primed and ready.",
+  "🧠 Neural interface linked.",
+  "📈 Diagnostics read green across the board.",
+  "🧬 Upgrading system DNA.",
+  "🛡️ Firewall integrity at 100%.",
+  "💽 Reading localized data sectors.",
+  "⚡ Surfing the neon grid.",
+  "🤖 Synthetic logic parameters functioning normally."
 ];
 
 function footerQuip() {
@@ -58,9 +58,9 @@ function footerQuip() {
 }
 
 /**
- * Base embed with shared defaults — pastel pink, timestamp, cute footer.
+ * Base embed with shared defaults — terminal cyan, timestamp, cyber footer.
  */
-function base(color = COLORS.pink) {
+function base(color = COLORS.sky) {
   return new EmbedBuilder()
     .setColor(color)
     .setTimestamp()
@@ -73,15 +73,15 @@ function base(color = COLORS.pink) {
 function errorEmbed(content) {
   return new EmbedBuilder()
     .setColor(COLORS.danger)
-    .setTitle("✦ Oopsie Daisy~ 🌸")
+    .setTitle("⚠️ SYSTEM FATAL EXCEPTION")
     .setDescription(
-      `> 💭 *Hmm, something didn\'t go quite right...*\n\n` +
+      `> 💻 *CRITICAL ERROR IN SUBROUTINE...*\n\n` +
         `> ${content}\n\n` +
         `*${divider()}*\n` +
-        `*Don\'t worry — these things happen to the best of us! Give it another try? 🌷*`,
+        `*Diagnostic recommended. Please reboot the sequence and try again.*`,
     )
     .setFooter({
-      text: "🌸 Mistakes are just little adventures in disguise~ You've got this!",
+      text: "⚡ Core dump analyzed. System recovery initiated.",
     })
     .setTimestamp();
 }
@@ -89,11 +89,11 @@ function errorEmbed(content) {
 // ── Tier Helper ───────────────────────────────────────────────────────────────
 
 function getTier(balance) {
-  if (balance >= 100000) return { icon: "💎", name: "Diamond" };
-  if (balance >= 50000) return { icon: "👑", name: "Crown" };
-  if (balance >= 10000) return { icon: "💳", name: "Gold" };
-  if (balance >= 1000) return { icon: "💵", name: "Silver" };
-  return { icon: "🪨", name: "Stone" };
+  if (balance >= 100000) return { icon: "💎", name: "Apex Protocol" };
+  if (balance >= 50000) return { icon: "🌐", name: "Network Overlord" };
+  if (balance >= 10000) return { icon: "📈", name: "Data Broker" };
+  if (balance >= 1000) return { icon: "💻", name: "Netrunner" };
+  return { icon: "🔌", name: "Terminal User" };
 }
 
 // ── Reminder Embeds ──────────────────────────────────────────────────────────
@@ -101,24 +101,24 @@ function getTier(balance) {
 function reminderSetEmbed(targetUser, message, timeStr, targetChannel) {
   return {
     file: asset("reminder.png"),
-    embed: base(COLORS.lavender ?? COLORS.lilac)
-      .setTitle("🌠 A Magical Promise Has Been Made~ ✨")
+    embed: base(COLORS.lilac)
+      .setTitle("⏰ SYSTEM OVERRIDE: ROUTINE SCHEDULED")
       .setThumbnail("attachment://reminder.png")
       .setDescription(
-        `*✧ sealing it with a sparkle and a pinky-swear ✧*\n\n` +
-          `I have carefully tucked your reminder into my memory ribbon~ 🎀\n` +
-          `I pinky-promise to give **${targetUser.username}** the gentlest little nudge in **\`${timeStr}\`**!\n\n` +
+        `*< establishing temporal beacon in the mainframe >*\n\n` +
+          `Event trigger registered. I have partitioned local memory. 💾\n` +
+          `Execution sequence for **${targetUser.username}** will deploy in **\`${timeStr}\`**!\n\n` +
           `*${divider()}*`,
       )
       .addFields(
-        { name: "🌸  The Promise", value: `\`\`\`${message}\`\`\`` },
+        { name: "📁  Data Payload", value: `\`\`\`${message}\`\`\`` },
         {
-          name: "⏳  When I'll Whisper",
+          name: "⏱️  Execution Time",
           value: `\`${timeStr}\``,
           inline: true,
         },
         {
-          name: "📍  Where I'll Appear",
+          name: "📡  Target Node",
           value: `${targetChannel}`,
           inline: true,
         },
@@ -131,17 +131,17 @@ function reminderFiredEmbed(message, initiatorTag) {
     file: asset("reminder.png"),
     embed: new EmbedBuilder()
       .setColor(COLORS.warning)
-      .setTitle("🔔 *ding dong~!* Your Magical Alarm is Ringing! 🌸")
+      .setTitle("⚠️ NOTIFICATION TRIGGERED")
       .setThumbnail("attachment://reminder.png")
       .setDescription(
-        `*✧ tapping you oh-so-gently on the shoulder ✧*\n\n` +
-          `I remembered~! 🎀 Here's the little note you left for your future self:\n\n` +
-          `> ### ✨ ${message}\n\n` +
+        `*< decrypting temporal payload >*\n\n` +
+          `Alert sequence active! ⚡ Pinging your neural link with the following packet:\n\n` +
+          `> ### 🌐 ${message}\n\n` +
           `*${divider()}*\n` +
-          `*I hope you\'re having the loveliest, sparkliest day~ 🌷*`,
+          `*Transmission complete. Connection terminated.*`,
       )
       .setFooter({
-        text: `🎀 Reminder conjured by ${initiatorTag} • Delivered right on time, with love!`,
+        text: `⚡ Task queued by ${initiatorTag} • Deployed with microsecond precision.`,
       })
       .setTimestamp(),
   };
@@ -153,20 +153,20 @@ function cooldownSetEmbed(targetUser, timeStr, endTime, initiator) {
   const unix = Math.floor(endTime / 1000);
   return {
     file: asset("cooldown.png"),
-    embed: base(COLORS.sky)
-      .setTitle("💤 Tuck-In Time~ Nighty Night! 🌙")
+    embed: base(COLORS.info)
+      .setTitle("💤 CRYOSLEEP POD ACTIVATED")
       .setThumbnail("attachment://cooldown.png")
       .setDescription(
-        `*✧ fluffing the pillows and dimming the fairy lights ✧*\n\n` +
-          `🌙 **${targetUser.username}** is being gently tucked in for a cozy little rest~\n` +
-          `Shhh, no disturbances please! They\'ll wake up all fresh and sparkly soon ✨\n\n` +
+        `*< powering down auxiliary systems >*\n\n` +
+          `🔌 **${targetUser.username}** is entering hibernation protocol.\n` +
+          `Neural activity minimizing to conserve battery life until wake condition is met. ⚡\n\n` +
           `*${divider()}*`,
       )
       .addFields(
-        { name: "🌙  Nap Length", value: `\`${timeStr}\``, inline: true },
-        { name: "☀️  Wake-Up Time", value: `<t:${unix}:T>`, inline: true },
-        { name: "⏳  Zzz... Time Left", value: `<t:${unix}:R>`, inline: true },
-        { name: "🎀  Tucked In By", value: `${initiator}`, inline: true },
+        { name: "🔋  Recharge Duration", value: `\`${timeStr}\``, inline: true },
+        { name: "⚡  Activation Cycle", value: `<t:${unix}:T>`, inline: true },
+        { name: "⏳  Cycles Remaining", value: `<t:${unix}:R>`, inline: true },
+        { name: "🛡️  Authorized By", value: `${initiator}`, inline: true },
       ),
   };
 }
@@ -174,14 +174,14 @@ function cooldownSetEmbed(targetUser, timeStr, endTime, initiator) {
 function cooldownExpiredEmbed(mention) {
   return {
     file: asset("cooldown.png"),
-    embed: base(COLORS.mint)
-      .setTitle("☀️ Good Morning, Sleepyhead~! 🌸✨")
+    embed: base(COLORS.success)
+      .setTitle("☀️ HIBERNATION PROTOCOL COMPLETE")
       .setThumbnail("attachment://cooldown.png")
       .setDescription(
-        `*✧ swooshing open the curtains and flooding the room with sunshine ✧*\n\n` +
-          `🌟 Rise and shine, ${mention}!\n` +
-          `Your cozy little cooldown nap is all done~ You\'re refreshed, you\'re glowing,\n` +
-          `and you\'re absolutely ready to sparkle again! Go get \'em! 💪🌸\n\n` +
+        `*< ramping power to main thrusters >*\n\n` +
+          `⚡ System online, ${mention}!\n` +
+          `Battery levels are at 100%. Diagnostic checks report optimal performance.\n` +
+          `You are cleared to access the grid. 🌐💻\n\n` +
           `*${divider()}*`,
       ),
   };
@@ -190,14 +190,13 @@ function cooldownExpiredEmbed(mention) {
 function cooldownRemovedEmbed(targetUser) {
   return {
     file: asset("cooldown.png"),
-    embed: base(COLORS.success)
-      .setTitle("🎉 Surprise Early Release~! ✨")
+    embed: base(COLORS.mint)
+      .setTitle("🔓 MANUAL OVERRIDE: CRYOSLEEP ABORTED")
       .setThumbnail("attachment://cooldown.png")
       .setDescription(
-        `*✧ sneaking in quietly and opening the curtains a little early ✧*\n\n` +
-          `🌈 What a lovely surprise! All cooldowns for ${targetUser} have been\n` +
-          `whisked away like morning mist on a sunny day~ They\'re up, they\'re bright,\n` +
-          `and they\'re absolutely ready to dazzle the entire world! ✨🌸\n\n` +
+        `*< emergency wake sequence initiated >*\n\n` +
+          `⚡ Administrator privileges have bypassed the sleep cycle for ${targetUser}.\n` +
+          `Auxiliary power instantly restored. Local systems are fully operational on the neon grid.\n\n` +
           `*${divider()}*`,
       ),
   };
@@ -219,36 +218,36 @@ function balanceEmbed(
     embed: new EmbedBuilder()
       .setColor(COLORS.gold)
       .setAuthor({
-        name: `✦ ${targetUser.username}'s Treasure Chest ✦`,
+        name: `⚡ ${targetUser.username}'s Data Vault ⚡`,
         iconURL: targetUser.displayAvatarURL({ dynamic: true }),
       })
       .setThumbnail("attachment://balance.png")
       .setDescription(
-        `*✧ lifting the lid on a glittering chest with a satisfying creak ✧*\n\n` +
-          `### 🏆  Wall of Wealthy Wonders\n` +
+        `*< querying blockchain ledgers >*\n\n` +
+          `### 🌐  The Elite Netrunner Board\n` +
           (leaderboardStr ||
-            "*No treasure hunters yet — be the first to claim glory!* 🌱") +
+             "*Grid network empty — waiting for local connections!* 🔌") +
           `\n\n*${divider()}*`,
       )
       .addFields(
         {
-          name: `${tier.icon}  Treasure Hoard`,
-          value: `\`\`\`₹${balance.toLocaleString()}\`\`\``,
+          name: `${tier.icon}  Crypto Balance`,
+          value: `\`\`\`${balance.toLocaleString()} CR\`\`\``,
           inline: true,
         },
         {
-          name: "📈  Global Standing",
+          name: "📈  Network Rank",
           value: `\`\`\`#${rank}\`\`\``,
           inline: true,
         },
         {
-          name: "🏅  Prestige Tier",
+          name: "🏅  Clearance Level",
           value: `\`${tier.icon} ${tier.name}\``,
           inline: true,
         },
       )
       .setFooter({
-        text: `💰 ₹${totalEconomy.toLocaleString()} glittering in the world economy  •  ${footerQuip()}`,
+        text: `💰 ${totalEconomy.toLocaleString()} CR circulating in the mainframe  •  ${footerQuip()}`,
       })
       .setTimestamp(),
   };
@@ -265,23 +264,23 @@ function addMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
   return {
     file: asset("money.png"),
     embed: base(COLORS.mint)
-      .setTitle("🪙 Coins Are Raining Down~! 💸✨")
+      .setTitle("💵 INCOMING DATA TRANSFER")
       .setThumbnail("attachment://money.png")
       .setDescription(
-        `*✧ golden coins come tumbling joyfully from the sky ✧*\n\n` +
-          `🎊 **₹${amount.toLocaleString()}** is fluttering its way into ${targetUser}\'s treasure chest!\n\n` +
+        `*< decrypting local transaction hashes >*\n\n` +
+          `⚡ **${amount.toLocaleString()} CR** successfully routed to ${targetUser}\'s private vault!\n\n` +
           (promoted
-            ? `🌟 *Ooooh~! They just soared to a shiny brand new wealth tier!* 🎉\n\n`
+            ? `🌐 *System alert: Clearance Level upgraded! Authorized for deeper access.* 🔌\n\n`
             : "") +
           `*${divider()}*`,
       )
       .addFields(
         {
-          name: "💰  New Hoard Total",
-          value: `\`₹${oldBalance.toLocaleString()}\`  →  **₹${newBalance.toLocaleString()}**`,
+          name: "💾  Vault Total",
+          value: `\`${oldBalance.toLocaleString()} CR\`  →  **${newBalance.toLocaleString()} CR**`,
           inline: true,
         },
-        { name: "🏅  Prestige Tier", value: tierLine, inline: true },
+        { name: "🏅  Clearance Level", value: tierLine, inline: true },
       ),
   };
 }
@@ -297,21 +296,21 @@ function removeMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
   return {
     file: asset("money.png"),
     embed: base(COLORS.peach)
-      .setTitle("🏦 A Gentle Vault Withdrawal~ 🌸")
+      .setTitle("💸 OUTGOING SECURE TRANSFER")
       .setThumbnail("attachment://money.png")
       .setDescription(
-        `*✧ carefully lifting coins from the velvet-lined vault ✧*\n\n` +
-          `🌷 **₹${amount.toLocaleString()}** has been gracefully removed from ${targetUser}\'s treasury.\n` +
-          `Every coin accounted for, every ribbon still perfectly in place~\n\n` +
+        `*< compiling outgoing transaction payload >*\n\n` +
+          `⚡ **${amount.toLocaleString()} CR** has been deducted from ${targetUser}\'s balance.\n` +
+          `Account synchronized with the global ledger. 📉\n\n` +
           `*${divider()}*`,
       )
       .addFields(
         {
-          name: "💰  Remaining Hoard",
-          value: `\`₹${oldBalance.toLocaleString()}\`  →  **₹${newBalance.toLocaleString()}**`,
+          name: "💾  Remaining Balance",
+          value: `\`${oldBalance.toLocaleString()} CR\`  →  **${newBalance.toLocaleString()} CR**`,
           inline: true,
         },
-        { name: "🏅  Prestige Tier", value: tierLine, inline: true },
+        { name: "🏅  Clearance Level", value: tierLine, inline: true },
       ),
   };
 }
@@ -319,7 +318,7 @@ function removeMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
 // ── Memory Embeds ────────────────────────────────────────────────────────────
 
 function memoryListEmbed(slots) {
-  const slotEmojis = ["🍓", "🍊", "💙", "💜"];
+  const slotEmojis = ["💾", "🔌", "🔋", "⚙️"];
   const lines = [1, 2, 3, 4]
     .map((slot, i) => {
       const msg = slots[slot];
@@ -327,18 +326,18 @@ function memoryListEmbed(slots) {
         ? msg.length > 55
           ? msg.slice(0, 52) + "..."
           : msg
-        : "*~ empty, waiting for a secret ~*";
-      const charCnt = msg ? `\`${msg.length} chars\`` : "`0 chars`";
+        : "*[ unallocated sector limits ]*";
+      const charCnt = msg ? `\`${msg.length} bits\`` : "`0 bits`";
       return `${slotEmojis[i]}  **Slot ${slot}:** ${preview} — ${charCnt}`;
     })
     .join("\n\n");
 
   return new EmbedBuilder()
     .setColor(COLORS.lilac)
-    .setTitle("📖 Peeking Into My Magical Notebook~ ✨")
+    .setTitle("🗄️ ACCESSING ENCRYPTED MAINFRAME")
     .setDescription(
-      `*✧ gently unclasping the little star-shaped lock on a tiny velvet journal ✧*\n\n` +
-        `Here are all the little things I\'ve been keeping extra safe for you:\n\n` +
+      `*< bypassing local firewalls for memory access >*\n\n` +
+        `Current data held in secure partitions:\n\n` +
         `${lines}\n\n` +
         `*${divider()}*`,
     )
@@ -351,25 +350,25 @@ function memoryListEmbed(slots) {
 function ticketWelcomeEmbed(user, count, category, answers) {
   const embed = new EmbedBuilder()
     .setColor(COLORS.info)
-    .setTitle(`🎀 Welcome to Your Cozy Little Corner~! 🌸  ✦ Ticket #${count}`)
+    .setTitle(`🌐 PRIVATE CHANNEL ESTABLISHED  ✦ Support Thread #${count}`)
     .setDescription(
-      `*✧ hanging up the little "We\'re Happy to Help!" sign just for you ✧*\n\n` +
-        `Hello hello, ${user}! 🌷 You\'ve stepped into the warmest, sparkliest help-desk in town!\n` +
-        `Our lovely team has been notified and will float over shortly —\n` +
-        `feel free to share everything on your mind while you wait~ 💕\n\n` +
+      `*< encrypting line with end-to-end 256-bit security >*\n\n` +
+        `Connection successful, ${user}. ⚡ You have entered a secure admin sector.\n` +
+        `Operators have been pinged and will jack in shortly to assist you.\n` +
+        `Please input any required data while you wait. 💻\n\n` +
         `*${divider()}*`,
     )
     .setThumbnail(user.displayAvatarURL({ dynamic: true }))
     .addFields(
       {
-        name: "📂  Category",
+        name: "📁  Protocol",
         value: `${category.emoji} ${category.name}`,
         inline: true,
       },
-      { name: "🌸  Opened By", value: `${user}`, inline: true },
+      { name: "🔗  Connected By", value: `${user}`, inline: true },
     )
     .setFooter({
-      text: "🎀 Oakawol Support Desk • No worry is too small, we genuinely love to help~!",
+      text: "⚡ Oakawol Operating System • Corporate Help Desk",
     })
     .setTimestamp();
 
@@ -377,7 +376,7 @@ function ticketWelcomeEmbed(user, count, category, answers) {
   if (keys.length > 0) {
     embed.addFields({
       name: "\u200B",
-      value: `*${divider()}*\n📝  **Your Form Answers** *(so we can help you even faster!)* ✨`,
+      value: `*${divider()}*\n📝  **Form Input Data** *(parsed for system admins)* ⚡`,
     });
     embed.addFields(
       keys.map((k) => ({
@@ -392,16 +391,16 @@ function ticketWelcomeEmbed(user, count, category, answers) {
 
 function categoryListEmbed(categories) {
   const rows = categories
-    .map((c) => `${c.emoji}  **${c.name}**  \`ID: ${c.id}\``)
+    .map((c) => `${c.emoji}  **${c.name}**  \`NODE: ${c.id}\``)
     .join("\n");
 
   return new EmbedBuilder()
     .setColor(COLORS.gold)
-    .setTitle("🌟 Welcome to the Magical Help Shoppe~! ✨")
+    .setTitle("💻 SYSTEM TERMINAL ACCESS")
     .setDescription(
-      `*✧ the little bell above the door jingles as you step inside ✧*\n\n` +
-        `Here\'s what we can help you with today — choose whatever feels right! 🌸\n\n` +
-        `${rows || "*Hmm, the shelves are empty right now~ Check back soon!* 🌱"}\n\n` +
+      `*< initializing interactive command UI >*\n\n` +
+        `Select a network node below to initiate a private connection. ⚡\n\n` +
+        `${rows || "*No active network nodes. Servers offline.* 🔌"}\n\n` +
         `*${divider()}*`,
     )
     .setFooter({ text: footerQuip() })

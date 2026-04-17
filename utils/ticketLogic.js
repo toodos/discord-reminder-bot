@@ -174,6 +174,14 @@ async function closeTicket(interaction) {
 }
 
 async function manageUsers(interaction) {
+    const config = db.getGuildConfig(interaction.guildId);
+    const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator) ||
+        (config.adminRoleId && interaction.member.roles.cache.has(config.adminRoleId));
+
+    if (!isAdmin) {
+        return interaction.reply({ content: 'Only administrators can manage users in tickets! 🎀', ephemeral: true });
+    }
+
     const select = new UserSelectMenuBuilder()
         .setCustomId('ticket_user_select')
         .setPlaceholder('Select users to add or remove...')
@@ -199,6 +207,14 @@ async function manageUsers(interaction) {
 }
 
 async function handleUserUpdate(interaction) {
+    const config = db.getGuildConfig(interaction.guildId);
+    const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator) ||
+        (config.adminRoleId && interaction.member.roles.cache.has(config.adminRoleId));
+
+    if (!isAdmin) {
+        return interaction.reply({ content: 'Only administrators can manage users in tickets! 🎀', ephemeral: true });
+    }
+
     const ticket = db.getTicket(interaction.channelId);
     if (!ticket) return interaction.update({ embeds: [errorEmbed('Could not find ticket data.')], components: [] });
 

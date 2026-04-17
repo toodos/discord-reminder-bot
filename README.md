@@ -1,34 +1,34 @@
-# 🎀 Cute Reminder & Economy Bot ✨
+# ⚡ Oakawol System AI 🌐
 
-A premium, all-in-one Discord bot designed with a "cute" aesthetic! It features a fully autonomous **AI Chat Assistant**, a robust **Economy System**, a unified **Ticket System**, and a smart **Reminder System**. 🌸🌷
+A premium, all-in-one Discord bot designed with a **Cyberpunk/Sci-Fi** aesthetic! It features a fully autonomous **AI Network Interface**, a robust **Crypto-Economy System**, a unified **Admin Ticket System**, and a smart **Temporal Reminder System**. 💻🤖
 
 ---
 
-## ✨ Core Features
+## ⚡ Core Features
 
-### 🤖 Autonomous AI Chat Assistant
-Talk to the bot natively! Powered by Pollinations AI with a multi-model fallback strategy.
-- **Smart Tool Calling**: The bot can execute its own commands directly if you ask it (e.g., "Add 500 coins to @user" or "Remind me to nap in 10m").
-- **Mention to Chat**: Simply ping the bot or DM it to spark up a seamless, contextual conversation!
+### 🤖 Autonomous AI Chat Interface
+Jack into the bot natively! Powered by Pollinations AI with a multi-model fallback strategy.
+- **Smart Protocol Execution**: The bot can execute its own commands directly if you ask it (e.g., "Add 500 CR to @user" or "Initiate cryosleep in 10m").
+- **Mention to Uplink**: Simply ping the bot or DM it to spark up a seamless, contextual connection!
 
-### 💰 Economy System
-Manage your server's wealth with a sparkly global economy!
-- **Global Leaderboard**: See who the biggest ballers are.
-- **Sparkly Vaults**: Every user has a personal balance.
-- **Admin Controls**: Shower users with money or deduct it when needed.
+### 💰 Crypto Economy System
+Manage your server's local grid wealth with a secure cyber economy!
+- **Global Network Board**: See who the biggest Netrunners are.
+- **Encrypted Vaults**: Every user has a personal crypto balance.
+- **Admin Overrides**: Inject users with credits or deduct them to balance the ledger.
 
-### 🎫 Unified Ticket System
-A professional, interaction-based ticket system for supporting your community.
-- **Department Categories**: Group tickets by purpose (e.g., Support, Feedback).
-- **Interactive Panels**: Open tickets with a single button click.
-- **Staff Management**: Add or remove users from tickets using a cute select menu.
-- **Transcripts**: Automatically save a beautiful HTML record of closed tickets.
+### 🎫 Encrypted Ticket System
+A professional, secure ticket system for supporting your grid operatives.
+- **Operational Nodes**: Group tickets by purpose (e.g., Support, Bug Reports).
+- **Interactive Terminals**: Open secure comms with a single button click.
+- **Network Management**: Add or remove users from secure threads using a terminal interface.
+- **Data Transcripts**: Automatically save an HTML core memory record of closed channels.
 
-### ⏰ Reminder & Cooldown System
-Never miss a task with cute pings and DMs!
-- **Smart Reminders**: Set reminders for yourself or others (e.g., `10m`, `1h`).
-- **Nap Time (Cooldowns)**: Put users on a "cozy nap" to manage task assignments.
-- **Auto-Notifications**: The bot sends a DM and pings the channel when time is up.
+### ⏰ Reminder & Cryosleep System
+Never miss an operation with precise temporal pings and DMs!
+- **Temporal Beacons**: Set active reminders for yourself or others (e.g., `10m`, `1h`).
+- **Hibernate (Cooldowns)**: Put users into "cryosleep" to manage network load.
+- **System Pings**: The bot sends a direct neural ping when the timer expires.
 
 ---
 
@@ -66,44 +66,44 @@ node index.js
 
 ---
 
-## 📋 All Commands
+## 📋 All Executable Protocols
 
-### 🌸 Reminders & Naps
-| Command | Description |
+### ⚡ Temporal Commands
+| Protocol | Description |
 | :--- | :--- |
-| `/remind` | `time` `message` `[channel]` `[user]` - Set a reminder! |
-| `/cd` | `user` `[time]` - Put a user in a cozy nap (cooldown). |
-| `/remove_cd` | `user` - Wake someone up early! (Admin Only) |
-| `/verify` | `[link]` - Manually verify a Reddit link. (Admin Only) |
-| `Verify Link` | (Context Menu) Right-click a message to verify. (Admin Only) |
+| `/remind` | `time` `payload` `[node]` `[user]` - Set a temporal beacon! |
+| `/cd` | `user` `[duration]` - Put a user in cryosleep. |
+| `/remove_cd` | `user` - Manually abort cryosleep! (Admin Only) |
+| `/verify` | `[hash]` - Manually verify a secure link. (Admin Only) |
+| `Verify Link` | (Context Menu) Right-click a datastream to verify. (Admin Only) |
 
-### 💰 Economy
-| Command | Description |
+### 💰 Crypto Ledger
+| Protocol | Description |
 | :--- | :--- |
-| `/balance` | `[user]` - Peek into a sparkly personal vault. |
-| `/add_money` | `user` `amount` - Shower a user with money! (Admin Only) |
-| `/remove_money` | `user` `amount` - Take some money away. (Admin Only) |
+| `/balance` | `[user]` - Access a secure data vault. |
+| `/add_money` | `user` `amount` - Inject credits into a user's vault! (Admin Only) |
+| `/remove_money` | `user` `amount` - Deduct credits. (Admin Only) |
 
-### 🎫 Ticket Management (Admin Only)
-| Command | Description |
+### 🎫 Network Channels (Admin Only)
+| Protocol | Description |
 | :--- | :--- |
-| `/setup` | Configure log and transcript channels. |
-| `/category create` | Create a ticket department with its own emoji and staff role. |
-| `/category list` | List all active ticket categories and IDs. |
-| `/category delete` | `id` - Remove a ticket category. |
-| `/panel create` | Create a button panel in a channel for users to open tickets. |
-| `/close` | Close the current ticket and generate a transcript. |
+| `/setup` | Configure log and transcript databanks. |
+| `/category create` | Create a comms node with its own protocols. |
+| `/category list` | List all active nodes and UUIDs. |
+| `/category delete` | `id` - Defrag a comms node. |
+| `/panel create` | Deploy a terminal panel for users to open comms. |
+| `/close` | Terminate the connection and generate an encrypted transcript. |
 
 ---
 
-## 📂 Project Structure
-- `index.js`: Main bot logic and interaction handling.
-- `deploy-commands.js`: Command registration script.
-- `utils/`: Core logic modules (database, tickets, timers).
-- `data/`: Economy database (JSON).
-- `tickets.db`: Ticket system database (SQLite).
-- `assets/`: Cute images and icons used in embeds.
+## 📂 System Architecture
+- `index.js`: Main logic core and socket routing.
+- `deploy-commands.js`: Protocol deployment script.
+- `utils/`: Neural logic modules (database, tickets, temporal).
+- `data/`: Crypto ledger (JSON).
+- `tickets.db`: Comms database (SQLite).
+- `assets/`: UI assets and holographic vectors used in the terminal.
 
 ---
 
-Created with love and sparkles! 🍭🌻✨🌷🍬
+End of line. Built in the neon glow of the grid. 💻🌐⚡🔋
