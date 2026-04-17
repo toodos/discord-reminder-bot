@@ -1,34 +1,34 @@
-# ⚡ Oakawol System AI 🌐
+# 🤖 Oakawol Automated Assistant ✨
 
-A premium, all-in-one Discord bot designed with a **Cyberpunk/Sci-Fi** aesthetic! It features a fully autonomous **AI Network Interface**, a robust **Secure Economy System**, a unified **Admin Ticket System**, and a smart **Temporal Reminder System**. 💻🤖
+A premium, all-in-one Discord bot designed with a **Clean & Cute Robotic** aesthetic! It features a fully autonomous **AI Support Interface**, a reliable **Secure Economy System**, a structured **Ticket System**, and a precise **Reminder System**. 📋🛠️
 
 ---
 
-## ⚡ Core Features
+## ✨ Core Operational Features
 
 ### 🤖 Autonomous AI Chat Interface
-Jack into the bot natively! Powered by Pollinations AI with a multi-model fallback strategy.
-- **Smart Protocol Execution**: The bot can execute its own commands directly if you ask it (e.g., "Add 500 ₹ to @user" or "Initiate cryosleep in 10m").
+Communicate with the bot natively! Powered by Pollinations AI with a multi-model fallback strategy.
+- **Smart Protocol Execution**: The bot can execute its own commands directly if you politely ask it (e.g., "Could you add 500 ₹ to @user?" or "Schedule a recharge in 10m").
 - **Mention to Uplink**: Simply ping the bot or DM it to spark up a seamless, contextual connection!
 
 ### 💰 Secure Economy System
-Manage your server's local grid wealth with a secure cyber economy!
-- **Global Network Board**: See who the biggest Netrunners are.
-- **Encrypted Vaults**: Every user has a personal rupee balance.
-- **Admin Overrides**: Inject users with credits or deduct them to balance the ledger.
+Manage your server's funds efficiently with a reliable economic ledger.
+- **Global Network Board**: See who the biggest contributors are.
+- **Secure Vaults**: Every user has a personal Rupee (₹) balance.
+- **Admin Adjustments**: Inject users with funds or deduct them to balance the ledger smoothly.
 
-### 🎫 Encrypted Ticket System
-A professional, secure ticket system for supporting your grid operatives.
-- **Operational Nodes**: Group tickets by purpose (e.g., Support, Bug Reports).
+### 📋 Structured Ticket System
+A professional, secure ticket system for supporting your users.
+- **Support Departments**: Group tickets by purpose (e.g., Support, Bug Reports).
 - **Interactive Terminals**: Open secure comms with a single button click.
-- **Network Management**: Add or remove users from secure threads using a terminal interface.
-- **Data Transcripts**: Automatically save an HTML core memory record of closed channels.
+- **Network Management**: Add or remove users from support threads using a polite interface.
+- **Data Transcripts**: Automatically save an HTML archive of closed channels for your records.
 
-### ⏰ Reminder & Cryosleep System
-Never miss an operation with precise temporal pings and DMs!
-- **Temporal Beacons**: Set active reminders for yourself or others (e.g., `10m`, `1h`).
-- **Hibernate (Cooldowns)**: Put users into "cryosleep" to manage network load.
-- **System Pings**: The bot sends a direct neural ping when the timer expires.
+### ⏰ Reminder & Recharge System
+Never miss an operation with polite temporal pings and DMs!
+- **Scheduled Alarms**: Set active reminders for yourself or others (e.g., `10m`, `1h`).
+- **Recharge (Cooldowns)**: Put users into "recharge" mode to manage chat overload.
+- **System Pings**: The bot sends a direct notification when the timer efficiently expires.
 
 ---
 
@@ -96,14 +96,14 @@ node index.js
 
 ---
 
-## 📂 System Architecture
-- `index.js`: Main logic core and socket routing.
+## 🗂️ Project Directory
+- `index.js`: Main operation core and socket routing.
 - `deploy-commands.js`: Protocol deployment script.
 - `utils/`: Neural logic modules (database, tickets, temporal).
 - `data/`: Secure ledger (JSON).
 - `tickets.db`: Comms database (SQLite).
-- `assets/`: UI assets and holographic vectors used in the terminal.
+- `assets/`: Adorable 3D robot vectors used in the message interfaces.
 
 ---
 
-End of line. Built in the neon glow of the grid. 💻🌐⚡🔋
+Beep boop! Processed with precision and a robotic smile. 🤖✨

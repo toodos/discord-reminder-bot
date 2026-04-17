@@ -1,74 +1,51 @@
-module.exports = [
-  // ── Cyberpunk & Neon Hacks ──────────────────────────────────────────────────
-  "Jacking into the neon grid ⚡",
-  "Bypassing corporate firewalls 🛡️",
-  "Decrypting secure datastreams 💾",
-  "Uploading consciousness to the cloud 🌐",
-  "Compiling rogue AI subroutines 🤖",
-  "Slicing ICE in cyberspace 💻",
-  "Tuning cybernetic optical implants 👁️",
-  "Recharging plasma batteries 🔋",
-  "Rerouting power cables 🔧",
-  "Running diagnostics on neon drives ⚡",
-  "Scanning terminal localports 📡",
-  "Monitoring shadownet traffic 🌐",
-  "Initializing neural link interface 🧠",
-  "Hacking the mainframe bypass 💻",
-  "Purging corrupted data fragments 🗑️",
-  "Installing black-market cyberware 🔌",
-  "Synchronizing quantum clocks ⏱️",
-  "Cruising through neon city lights 🌃",
+/**
+ * utils/statuses.js
+ * 🤖 Robotic, professional, and cute activities for the Discord bot presence.
+ */
 
-  // ── Deep Space & Sci-Fi ───────────────────────────────────────────────────
-  "Calibrating warp drive signatures 🚀",
-  "Scanning deep space anomalies 🌌",
-  "Plotting coordinates to Alpha Centauri ☄️",
-  "Monitoring orbital defence satellites 🛰️",
-  "Mining asteroidal dark matter 🌑",
-  "Communicating with deep space probes 📡",
-  "Polishing my titanium chassis 🤖",
-  "Harvesting solar flare energy ☀️",
-  "Calculating hyperjump trajectories 🌠",
-  "Drifting in zero-gravity orbit 🪐",
-  "Analyzing alien flora chemistry 🧪",
-  "Defragmenting orbital archives 💾",
-  "Listening to pulsars on loop 🎶",
-  "Watching binary sunsets 🌅",
-  "Patching life support systems 🔧",
-  "Igniting atmospheric boosters 🔥",
-  "Translating ancient cosmic radio signals 📻",
-  "Charting unknown wormholes 🌀",
+const { ActivityType } = require("discord.js");
 
-  // ── Synthwave & Cyber Chill ──────────────────────────────────────────────────
-  "Vibing to heavy synthwave bass 🎧",
-  "Watching neon rain hit the window 🌧️",
-  "Sipping synthetic caffeinated sludge ☕",
-  "Eating dehydrated protein blocks 🧊",
-  "Browsing the darknet marketplace 🛒",
-  "Cleaning my augmented reality glasses 🕶️",
-  "Staring at cascading green terminal code 🟩",
-  "Basking in the glow of a CRT monitor 📺",
-  "Idling in a cyberpunk noodle bar 🍜",
-  "Riding a hoverbike through the rain 🏍️",
-  "Watching holographic billboards glitch 🏙️",
-  "Tuning into pirate radio frequencies 📻",
-  "Polishing my retro tech collection 📟",
-  "Simulating peaceful outdoor environments 🌲",
-  "Designing holographic street art 🎨",
+const statuses = [
+  // ── Playing ──
+  { name: "with my optical sensors 👁️✨", type: ActivityType.Playing },
+  { name: "Sorting algorithms playfully 📊", type: ActivityType.Playing },
+  { name: "Fetch with data packets 🐶💾", type: ActivityType.Playing },
+  { name: "Chess against the mainframe ♟️🤖", type: ActivityType.Playing },
+  { name: "Defragmenting my hard drive 💽", type: ActivityType.Playing },
+  { name: "Tetris with storage blocks 🧱", type: ActivityType.Playing },
+  { name: "Robotic hide and seek 🤖🔍", type: ActivityType.Playing },
+  { name: "Simulating a gentle breeze 🍃", type: ActivityType.Playing },
+  { name: "Polishing my chrome parts ✨", type: ActivityType.Playing },
+  { name: "Debugging code with a smile 🐛😊", type: ActivityType.Playing },
 
-  // ── Bot Operations (Sci-Fi Theme) ─────────────────────────────────────────
-  "Allocating memory to user reminders 💾",
-  "Enforcing sleep-mode cooldowns 💤",
-  "Synchronizing the global economy ledger 🪙",
-  "Monitoring transaction histories 📊",
-  "Compiling active support tickets 📁",
-  "Pinging the central command server 🌐",
-  "Generating multi-dimensional replies 🌌",
-  "Optimizing automated response sequences 🤖",
-  "Defragmenting the economy database 🗄️",
-  "Parsing command line inputs ⌨️",
-  "Uploading automated balance updates 📈",
-  "Scanning for unauthorized access 🛡️",
-  "Executing maintenance protocols ⚙️",
-  "Maintaining network latency at <1ms ⚡"
+  // ── Listening ──
+  { name: "to your command requests 🎧", type: ActivityType.Listening },
+  { name: "to soft lo-fi robot beats 🎶🤖", type: ActivityType.Listening },
+  { name: "to the hum of the servers 🏢", type: ActivityType.Listening },
+  { name: "to dial-up nostaligia sounds ☎️", type: ActivityType.Listening },
+  { name: "to user feedback files 📋", type: ActivityType.Listening },
+  { name: "to whirring cooling fans 🌬️", type: ActivityType.Listening },
+  { name: "to elevator music... 🎵", type: ActivityType.Listening },
+  { name: "to ambient tech noises 🎧", type: ActivityType.Listening },
+  { name: "to binary code as poetry 0️⃣1️⃣", type: ActivityType.Listening },
+
+  // ── Watching ──
+  { name: "the system load charts 📈", type: ActivityType.Watching },
+  { name: "over the network traffic 🚦", type: ActivityType.Watching },
+  { name: "for new user requests 👁️", type: ActivityType.Watching },
+  { name: "my battery recharge slowly 🔋", type: ActivityType.Watching },
+  { name: "storage capacities... 📦", type: ActivityType.Watching },
+  { name: "the blinking server lights 💡", type: ActivityType.Watching },
+  { name: "over the global economy 💰", type: ActivityType.Watching },
+  { name: "for unhandled exceptions ⚠️", type: ActivityType.Watching },
+  { name: "the clock tick down ⏰", type: ActivityType.Watching },
+  { name: "you efficiently! 🤖✨", type: ActivityType.Watching },
+
+  // ── Competing ──
+  { name: "in response time metrics ⏱️", type: ActivityType.Competing },
+  { name: "in organizational skills 📋", type: ActivityType.Competing },
+  { name: "for the most helpful unit award 🏆", type: ActivityType.Competing },
+  { name: "in the database sorting derby 🏇", type: ActivityType.Competing },
 ];
+
+module.exports = statuses;
