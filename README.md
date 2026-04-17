@@ -1,10 +1,15 @@
 # 🎀 Cute Reminder & Economy Bot ✨
 
-A premium, all-in-one Discord bot designed with a "cute" aesthetic! It features a robust **Economy System**, a unified **Ticket System**, and a smart **Reminder System**. 🌸🌷
+A premium, all-in-one Discord bot designed with a "cute" aesthetic! It features a fully autonomous **AI Chat Assistant**, a robust **Economy System**, a unified **Ticket System**, and a smart **Reminder System**. 🌸🌷
 
 ---
 
 ## ✨ Core Features
+
+### 🤖 Autonomous AI Chat Assistant
+Talk to the bot natively! Powered by Pollinations AI with a multi-model fallback strategy.
+- **Smart Tool Calling**: The bot can execute its own commands directly if you ask it (e.g., "Add 500 coins to @user" or "Remind me to nap in 10m").
+- **Mention to Chat**: Simply ping the bot or DM it to spark up a seamless, contextual conversation!
 
 ### 💰 Economy System
 Manage your server's wealth with a sparkly global economy!
@@ -43,6 +48,7 @@ Create a `.env` file in the root directory:
 DISCORD_TOKEN=your_token_here
 CLIENT_ID=your_client_id_here
 GUILD_ID=your_server_id_here  # Optional: For instant command updates!
+POLLINATIONS_API_KEY=your_pollinations_api_key_here # Required for AI chat
 ```
 
 ### 3. Requirements
