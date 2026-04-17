@@ -1,6 +1,6 @@
 # ⚡ Oakawol System AI 🌐
 
-A premium, all-in-one Discord bot designed with a **Cyberpunk/Sci-Fi** aesthetic! It features a fully autonomous **AI Network Interface**, a robust **Crypto-Economy System**, a unified **Admin Ticket System**, and a smart **Temporal Reminder System**. 💻🤖
+A premium, all-in-one Discord bot designed with a **Cyberpunk/Sci-Fi** aesthetic! It features a fully autonomous **AI Network Interface**, a robust **Secure Economy System**, a unified **Admin Ticket System**, and a smart **Temporal Reminder System**. 💻🤖
 
 ---
 
@@ -8,13 +8,13 @@ A premium, all-in-one Discord bot designed with a **Cyberpunk/Sci-Fi** aesthetic
 
 ### 🤖 Autonomous AI Chat Interface
 Jack into the bot natively! Powered by Pollinations AI with a multi-model fallback strategy.
-- **Smart Protocol Execution**: The bot can execute its own commands directly if you ask it (e.g., "Add 500 CR to @user" or "Initiate cryosleep in 10m").
+- **Smart Protocol Execution**: The bot can execute its own commands directly if you ask it (e.g., "Add 500 ₹ to @user" or "Initiate cryosleep in 10m").
 - **Mention to Uplink**: Simply ping the bot or DM it to spark up a seamless, contextual connection!
 
-### 💰 Crypto Economy System
+### 💰 Secure Economy System
 Manage your server's local grid wealth with a secure cyber economy!
 - **Global Network Board**: See who the biggest Netrunners are.
-- **Encrypted Vaults**: Every user has a personal crypto balance.
+- **Encrypted Vaults**: Every user has a personal rupee balance.
 - **Admin Overrides**: Inject users with credits or deduct them to balance the ledger.
 
 ### 🎫 Encrypted Ticket System
@@ -77,7 +77,7 @@ node index.js
 | `/verify` | `[hash]` - Manually verify a secure link. (Admin Only) |
 | `Verify Link` | (Context Menu) Right-click a datastream to verify. (Admin Only) |
 
-### 💰 Crypto Ledger
+### 💰 Secure Ledger
 | Protocol | Description |
 | :--- | :--- |
 | `/balance` | `[user]` - Access a secure data vault. |
@@ -100,7 +100,7 @@ node index.js
 - `index.js`: Main logic core and socket routing.
 - `deploy-commands.js`: Protocol deployment script.
 - `utils/`: Neural logic modules (database, tickets, temporal).
-- `data/`: Crypto ledger (JSON).
+- `data/`: Secure ledger (JSON).
 - `tickets.db`: Comms database (SQLite).
 - `assets/`: UI assets and holographic vectors used in the terminal.
 

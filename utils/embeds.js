@@ -223,7 +223,7 @@ function balanceEmbed(
       })
       .setThumbnail("attachment://balance.png")
       .setDescription(
-        `*< querying blockchain ledgers >*\n\n` +
+        `*< querying secure data ledgers >*\n\n` +
           `### 🌐  The Elite Netrunner Board\n` +
           (leaderboardStr ||
              "*Grid network empty — waiting for local connections!* 🔌") +
@@ -231,8 +231,8 @@ function balanceEmbed(
       )
       .addFields(
         {
-          name: `${tier.icon}  Crypto Balance`,
-          value: `\`\`\`${balance.toLocaleString()} CR\`\`\``,
+          name: `${tier.icon}  Rupee Balance`,
+          value: `\`\`\`₹${balance.toLocaleString()}\`\`\``,
           inline: true,
         },
         {
@@ -247,7 +247,7 @@ function balanceEmbed(
         },
       )
       .setFooter({
-        text: `💰 ${totalEconomy.toLocaleString()} CR circulating in the mainframe  •  ${footerQuip()}`,
+        text: `💰 ₹${totalEconomy.toLocaleString()} circulating in the mainframe  •  ${footerQuip()}`,
       })
       .setTimestamp(),
   };
@@ -267,8 +267,8 @@ function addMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
       .setTitle("💵 INCOMING DATA TRANSFER")
       .setThumbnail("attachment://money.png")
       .setDescription(
-        `*< decrypting local transaction hashes >*\n\n` +
-          `⚡ **${amount.toLocaleString()} CR** successfully routed to ${targetUser}\'s private vault!\n\n` +
+        `*< decrypting secure transaction hashes >*\n\n` +
+          `⚡ **₹${amount.toLocaleString()}** successfully routed to ${targetUser}\'s private vault!\n\n` +
           (promoted
             ? `🌐 *System alert: Clearance Level upgraded! Authorized for deeper access.* 🔌\n\n`
             : "") +
@@ -277,7 +277,7 @@ function addMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
       .addFields(
         {
           name: "💾  Vault Total",
-          value: `\`${oldBalance.toLocaleString()} CR\`  →  **${newBalance.toLocaleString()} CR**`,
+          value: `\`₹${oldBalance.toLocaleString()}\`  →  **₹${newBalance.toLocaleString()}**`,
           inline: true,
         },
         { name: "🏅  Clearance Level", value: tierLine, inline: true },
@@ -300,14 +300,14 @@ function removeMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
       .setThumbnail("attachment://money.png")
       .setDescription(
         `*< compiling outgoing transaction payload >*\n\n` +
-          `⚡ **${amount.toLocaleString()} CR** has been deducted from ${targetUser}\'s balance.\n` +
+          `⚡ **₹${amount.toLocaleString()}** has been deducted from ${targetUser}\'s balance.\n` +
           `Account synchronized with the global ledger. 📉\n\n` +
           `*${divider()}*`,
       )
       .addFields(
         {
           name: "💾  Remaining Balance",
-          value: `\`${oldBalance.toLocaleString()} CR\`  →  **${newBalance.toLocaleString()} CR**`,
+          value: `\`₹${oldBalance.toLocaleString()}\`  →  **₹${newBalance.toLocaleString()}**`,
           inline: true,
         },
         { name: "🏅  Clearance Level", value: tierLine, inline: true },
