@@ -1,4 +1,5 @@
-const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const { EmbedBuilder, AttachmentBuilder, PermissionFlagsBits } = require('discord.js');
+const db = require('./database');
 
 const aiToolDefinitions = [
     // Moderation & Interaction
@@ -639,6 +640,28 @@ const aiToolDefinitions = [
 
 async function executeTool(tName, args, message) {
     try {
+        const adminOnlyTools = [
+            'delete_recent_messages', 'timeout_user', 'kick_user', 'ban_user',
+            'lock_channel', 'unlock_channel', 'create_channel', 'change_bot_nickname',
+            'set_slowmode', 'delete_channel', 'rename_channel', 'set_channel_topic',
+            'create_role', 'assign_role', 'remove_role', 'unban_user', 'get_server_info',
+            'list_roles', 'list_channels', 'send_to_channel', 'pin_message', 'announce',
+            'read_channel_history', 'dm_user', 'set_memory', 'get_memory', 'list_memory',
+            'send_embed', 'get_user_info', 'react_to_recent_messages'
+        ];
+
+        if (adminOnlyTools.includes(tName)) {
+            if (!message.guild) return `Error: This tool can only be used in a server.`;
+            
+            const config = db.getGuildConfig(message.guild.id);
+            const isAdmin = message.member.permissions.has(PermissionFlagsBits.Administrator) ||
+                (config.adminRoleId && message.member.roles.cache.has(config.adminRoleId));
+            
+            if (!isAdmin) {
+                return `Error: Action denied. The user does not have administrator permissions. You are not allowed to give sensitive information or channel names or make announcements to non-admins.`;
+            }
+        }
+
         switch (tName) {
             case 'react_to_recent_messages': {
                 const count = Math.min(args.count || 3, 20);
