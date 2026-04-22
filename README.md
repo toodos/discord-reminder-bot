@@ -10,6 +10,8 @@ A premium, all-in-one Discord bot designed with a **Clean & Cute Robotic** aesth
 Communicate with the bot natively! Powered by Pollinations AI with a multi-model fallback strategy.
 - **Smart Protocol Execution**: The bot can execute its own commands directly if you politely ask it (e.g., "Could you add 500 ₹ to @user?" or "Schedule a recharge in 10m").
 - **Mention to Uplink**: Simply ping the bot or DM it to spark up a seamless, contextual connection!
+- **Persistent Memory Bank**: The bot actively remembers details about users and the server context across conversations.
+- **Administrative Security**: Sensitive AI execution tools (such as modifying balances, managing channels, and reading server logs) are strictly protected by role-based guardrails, ensuring only Administrators can execute administrative actions via the AI.
 
 ### 💰 Secure Economy System
 Manage your server's funds efficiently with a reliable economic ledger.
