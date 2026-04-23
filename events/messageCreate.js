@@ -173,7 +173,7 @@ module.exports = async function onMessageCreate(message) {
   // Fetch conversation history for context
   let conversationHistory = [];
   try {
-    const fetched = await message.channel.messages.fetch({ limit: 12 });
+    const fetched = await message.channel.messages.fetch({ limit: 30 });
     
     Array.from(fetched.values()).forEach(msg => {
       if (msg.id === message.id) return;
@@ -190,8 +190,8 @@ module.exports = async function onMessageCreate(message) {
       }
     });
 
-    if (conversationHistory.length > 8) {
-      conversationHistory = conversationHistory.slice(conversationHistory.length - 8);
+    if (conversationHistory.length > 25) {
+      conversationHistory = conversationHistory.slice(conversationHistory.length - 25);
     }
   } catch (error) {
     console.warn("Could not fetch conversation history:", error);
