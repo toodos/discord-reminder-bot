@@ -170,6 +170,33 @@ module.exports = async function onMessageCreate(message) {
   // Signal bot is busy → DND
   if (message.client.setActivity) message.client.setActivity(true);
 
+  // Fetch conversation history for context
+  let conversationHistory = [];
+  try {
+    const fetched = await message.channel.messages.fetch({ limit: 12 });
+    
+    Array.from(fetched.values()).forEach(msg => {
+      if (msg.id === message.id) return;
+      if (!msg.content) return;
+      if (msg.content.startsWith("!")) return;
+      
+      let textContent = msg.content.replace(new RegExp(`<@!?${message.client.user.id}>`, "g"), "").trim();
+      if (!textContent) return;
+      
+      if (msg.author.id === message.client.user.id) {
+        conversationHistory.unshift({ role: "assistant", content: textContent });
+      } else {
+        conversationHistory.unshift({ role: "user", content: `${msg.author.username}: ${textContent}` });
+      }
+    });
+
+    if (conversationHistory.length > 8) {
+      conversationHistory = conversationHistory.slice(conversationHistory.length - 8);
+    }
+  } catch (error) {
+    console.warn("Could not fetch conversation history:", error);
+  }
+
   try {
     await message.channel.sendTyping();
     let reply = null;
@@ -217,10 +244,12 @@ Available bot commands (use via cmd_ tools):
 - cmd_imagine: Create AI art. Pass args as the image description.
 - cmd_remind: Schedule a reminder. Pass args as "<duration> <note>" (e.g. "10m check oven")
 
+User messages are prefixed with their username (e.g. Username: message) so you know who is speaking.
 Always extract the user's Discord ID from mentions like <@123456789> and include it in args.
 Reply concisely and friendly. Do not include any reasoning or thinking in your response.`,
           },
-          { role: "user", content: prompt },
+          ...conversationHistory,
+          { role: "user", content: `${message.author.username}: ${prompt}` },
         ];
 
         const requestBody = {
