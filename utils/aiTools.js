@@ -171,6 +171,20 @@ const aiToolDefinitions = [
     {
         type: 'function',
         function: {
+            name: 'search_google',
+            description: 'Searches Google for a query and returns the top results and snippets.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    query: { type: 'string', description: 'The search query to look up on Google.' }
+                },
+                required: ['query']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
             name: 'search_reddit',
             description: 'Fetches the top hot posts from a requested subreddit.',
             parameters: {
@@ -745,6 +759,23 @@ async function executeTool(tName, args, message) {
                 return `Here is the information you requested!`;
             }
             // WEB TOOLS
+            case 'search_google': {
+                try {
+                    const google = require('googlethis');
+                    const options = { page: 0, safe: false, additional_params: { hl: 'en' } };
+                    const response = await google.search(args.query, options);
+                    
+                    if (!response || !response.results || response.results.length === 0) {
+                        return `I couldn't find any results for that on Google. 🧊`;
+                    }
+                    
+                    const topResults = response.results.slice(0, 3).map(r => `**${r.title}**\n${r.description}\n<${r.url}>`).join('\n\n');
+                    return `Here are the top results from Google for "${args.query}":\n\n${topResults}`;
+                } catch (e) {
+                    console.error("Google Search Error:", e);
+                    return `There was an error searching Google. 🧊`;
+                }
+            }
             case 'search_reddit': {
                 const res = await fetch(`https://www.reddit.com/r/${args.subreddit}/hot.json?limit=3`).then(r => r.json()).catch(() => null);
                 if (!res || !res.data || !res.data.children) return `I couldn't fetch from r/${args.subreddit}. It might not exist or be private. 🧊`;
