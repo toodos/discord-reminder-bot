@@ -19,8 +19,12 @@ Manage your server's funds efficiently with a reliable economic ledger.
 - **Secure Vaults**: Every user has a personal Rupee (₹) balance.
 - **Admin Adjustments**: Inject users with funds or deduct them to balance the ledger smoothly.
 
+### 💳 UPI & QR Storage System
+Store user UPI IDs securely in the unified database!
+- **QR Code Storage**: Upload representations of QR codes directly to the bot. Image buffers are translated into Base64 strings and stored strictly in the database, requiring zero local file management.
+- **Access Vault**: View saved user UPI information and QR code embeds effortlessly.
+
 ### 📋 Structured Ticket System
-A professional, secure ticket system for supporting your users.
 - **Support Departments**: Group tickets by purpose (e.g., Support, Bug Reports).
 - **Interactive Terminals**: Open secure comms with a single button click.
 - **Network Management**: Add or remove users from support threads using a polite interface.
@@ -79,12 +83,13 @@ node index.js
 | `/verify` | `[hash]` - Manually verify a secure link. (Admin Only) |
 | `Verify Link` | (Context Menu) Right-click a datastream to verify. (Admin Only) |
 
-### 💰 Secure Ledger
+### 💰 Secure Ledger (Credits & UPI)
 | Protocol | Description |
 | :--- | :--- |
 | `/balance` | `[user]` - Access a secure data vault. |
 | `/add_money` | `user` `amount` - Inject credits into a user's vault! (Admin Only) |
 | `/remove_money` | `user` `amount` - Deduct credits. (Admin Only) |
+| `/upi` | `set`/`get`/`delete`/`list` - Manage user UPI and Base64 QR storage records. |
 
 ### 🎫 Network Channels (Admin Only)
 | Protocol | Description |
@@ -102,8 +107,7 @@ node index.js
 - `index.js`: Main operation core and socket routing.
 - `deploy-commands.js`: Protocol deployment script.
 - `utils/`: Neural logic modules (database, tickets, temporal).
-- `data/`: Secure ledger (JSON).
-- `tickets.db`: Comms database (SQLite).
+- `data/`: Stores the unified `blossom.db` (SQLite) containing all user, economy, and AI memory records.
 - `assets/`: Adorable 3D robot vectors used in the message interfaces.
 
 ---
