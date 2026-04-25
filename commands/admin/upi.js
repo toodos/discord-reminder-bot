@@ -29,24 +29,22 @@ module.exports = {
                 return interaction.reply({ embeds: [errorEmbed('That doesn\'t look like a valid UPI ID! It should contain `@` (e.g. `name@upi`). 🌸')], ephemeral: true });
             }
 
-            let qrFilename = null;
+            let qrDataUri = null;
             if (attachment) {
                 const ext = attachment.name.split('.').pop() || 'png';
-                qrFilename = `qr_${targetUser.id}_${interaction.guildId}.${ext}`;
-                const qrPath = path.join(__dirname, '../../assets/qr', qrFilename);
-                
                 try {
                     const res = await fetch(attachment.url);
                     if (!res.ok) throw new Error(`Failed to fetch QR code: ${res.statusText}`);
                     const buffer = await res.arrayBuffer();
-                    fs.writeFileSync(qrPath, Buffer.from(buffer));
+                    const base64Str = Buffer.from(buffer).toString('base64');
+                    qrDataUri = `data:image/${ext};base64,${base64Str}`;
                 } catch (err) {
-                    console.error('[UPI Error] Failed to save QR code:', err);
-                    return interaction.reply({ embeds: [errorEmbed('Failed to save the QR code image locally! 🧊')], ephemeral: true });
+                    console.error('[UPI Error] Failed to fetch/parse QR code:', err);
+                    return interaction.reply({ embeds: [errorEmbed('Failed to save the QR code image! 🧊')], ephemeral: true });
                 }
             }
 
-            db.setUpi(targetUser.id, interaction.guildId, upiId, qrFilename);
+            db.setUpi(targetUser.id, interaction.guildId, upiId, qrDataUri);
 
             const embed = new EmbedBuilder()
                 .setColor(COLORS.mint)
@@ -64,11 +62,16 @@ module.exports = {
                 .setTimestamp();
 
             const files = [];
-            if (qrFilename) {
-                const qrPath = path.join(__dirname, '../../assets/qr', qrFilename);
-                const file = new AttachmentBuilder(qrPath, { name: qrFilename });
-                embed.setImage(`attachment://${qrFilename}`);
-                files.push(file);
+            if (qrDataUri) {
+                const matches = qrDataUri.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+                if (matches) {
+                    const ext = matches[1];
+                    const buffer = Buffer.from(matches[2], 'base64');
+                    const filename = `qr_${targetUser.id}_${interaction.guildId}.${ext}`;
+                    const file = new AttachmentBuilder(buffer, { name: filename });
+                    embed.setImage(`attachment://${filename}`);
+                    files.push(file);
+                }
             }
 
             return interaction.reply({ embeds: [embed], files });
@@ -104,7 +107,17 @@ module.exports = {
 
             const files = [];
             if (record.qrUrl) {
-                if (record.qrUrl.startsWith('http')) {
+                if (record.qrUrl.startsWith('data:image')) {
+                    const matches = record.qrUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+                    if (matches) {
+                        const ext = matches[1];
+                        const buffer = Buffer.from(matches[2], 'base64');
+                        const filename = `qr_${record.userId}_${interaction.guildId}.${ext}`;
+                        const file = new AttachmentBuilder(buffer, { name: filename });
+                        embed.setImage(`attachment://${filename}`);
+                        files.push(file);
+                    }
+                } else if (record.qrUrl.startsWith('http')) {
                     // Legacy support for hosted URLs
                     embed.setImage(record.qrUrl);
                 } else {
