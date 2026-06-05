@@ -5,10 +5,107 @@
  */
 const { PermissionFlagsBits, EmbedBuilder } = require("discord.js");
 const db = require("../utils/database");
-const { REDDIT_REGEX, LOADING_EMOJI } = require("../commands/admin/verify");
+const { REDDIT_REGEX, LOADING_EMOJI, CHECK_EMOJI } = require("../commands/admin/verify");
 const { aiToolDefinitions, executeTool } = require("../utils/aiTools");
 
 const URL_REGEX = /https?:\/\/[^\s]+/;
+
+async function verifyLinkStatus(url) {
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+      }
+    });
+    
+    if (!response.ok) {
+      return { working: false, reason: `HTTP status ${response.status}` };
+    }
+    
+    const finalUrl = response.url;
+    
+    const isReddit = /reddit\.com|redd\.it/i.test(finalUrl);
+    if (!isReddit) {
+      return { working: true, isReddit: false };
+    }
+    
+    const urlObj = new URL(finalUrl);
+    urlObj.search = '';
+    let jsonUrl = urlObj.toString();
+    if (!jsonUrl.endsWith('.json')) {
+      if (jsonUrl.endsWith('/')) {
+        jsonUrl = jsonUrl.slice(0, -1) + '.json';
+      } else {
+        jsonUrl = jsonUrl + '.json';
+      }
+    }
+    
+    const jsonRes = await fetch(jsonUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      }
+    });
+    
+    if (!jsonRes.ok) {
+      return { working: true, isReddit: true, removed: false };
+    }
+    
+    const data = await jsonRes.json();
+    const commentMatch = finalUrl.match(/\/comments\/[a-z0-9]+\/[^\/]+\/([a-z0-9]+)/i) || 
+                        finalUrl.match(/\/comments\/[a-z0-9]+\/_\/([a-z0-9]+)/i);
+    const commentId = commentMatch ? commentMatch[1] : null;
+    
+    let isRemoved = false;
+    
+    if (commentId) {
+      let targetComment = null;
+      
+      function findComment(node, targetId) {
+        if (!node) return null;
+        if (node.kind === 't1' && node.data && node.data.id === targetId) {
+          return node.data;
+        }
+        if (node.data && node.data.replies && node.data.replies.data && node.data.replies.data.children) {
+          for (const child of node.data.replies.data.children) {
+            const found = findComment(child, targetId);
+            if (found) return found;
+          }
+        }
+        return null;
+      }
+      
+      if (Array.isArray(data) && data[1]?.data?.children) {
+        for (const child of data[1].data.children) {
+          targetComment = findComment(child, commentId);
+          if (targetComment) break;
+        }
+      }
+      
+      if (targetComment) {
+        isRemoved = targetComment.body === '[removed]' || 
+                    targetComment.body === '[deleted]' || 
+                    targetComment.author === '[deleted]';
+      } else {
+        isRemoved = true;
+      }
+    } else {
+      const post = data[0]?.data?.children?.[0]?.data;
+      if (post) {
+        isRemoved = post.selftext === '[removed]' || 
+                    post.selftext === '[deleted]' || 
+                    !!post.removed_by_category;
+      }
+    }
+    
+    return { working: true, isReddit: true, removed: isRemoved };
+  } catch (error) {
+    console.error('[verifyLinkStatus] Error checking link:', error);
+    return { working: false, reason: error.message };
+  }
+}
 
 // Provider: Pollinations (Unified OpenAI-compatible API)
 // Models are tried in order; providers whose API key is missing are skipped.
@@ -138,11 +235,37 @@ module.exports = async function onMessageCreate(message) {
       if (!isAdmin) {
         const urlMatch = message.content.match(URL_REGEX);
         if (urlMatch) {
-          try {
-            if (REDDIT_REGEX.test(urlMatch[0]))
-              await message.react(LOADING_EMOJI);
-            else await message.react("✅");
-          } catch (err) {}
+          (async () => {
+            const url = urlMatch[0];
+            try {
+              // React with loading icon
+              await message.react(LOADING_EMOJI).catch(() => {});
+              
+              // Verify the link status
+              const result = await verifyLinkStatus(url);
+              
+              // Remove the loading reaction
+              const loadingReaction = message.reactions.cache.get(LOADING_EMOJI);
+              if (loadingReaction) {
+                await loadingReaction.users.remove(message.client.user.id).catch(() => {});
+              }
+              
+              if (result.working && (!result.isReddit || !result.removed)) {
+                // React with check mark
+                await message.react(CHECK_EMOJI).catch(() => {});
+              } else {
+                // React with cross mark
+                await message.react('❌').catch(() => {});
+              }
+            } catch (err) {
+              console.error('[Ticket Link Checker Error]', err);
+              const loadingReaction = message.reactions.cache.get(LOADING_EMOJI);
+              if (loadingReaction) {
+                await loadingReaction.users.remove(message.client.user.id).catch(() => {});
+              }
+              await message.react('❌').catch(() => {});
+            }
+          })();
         }
       }
     }
@@ -201,6 +324,18 @@ module.exports = async function onMessageCreate(message) {
     await message.channel.sendTyping();
     let reply = null;
 
+    // Fetch brain memories
+    const brainMemories = db.getAllRelevantBrainMemories(message.author.id, message.guild?.id);
+    let memoryPrompt = "";
+    if (brainMemories && brainMemories.length > 0) {
+      memoryPrompt = "\n\n--- LONG-TERM MEMORY (BRAIN) ---\n" + 
+        brainMemories.map(m => {
+          const scopeLabel = m.scope === 'user' ? `User ${message.author.username}` : (m.scope === 'server' ? 'Server' : 'Global');
+          return `[${scopeLabel}]: ${m.content}`;
+        }).join('\n') +
+        "\n---------------------------------";
+    }
+
     // Build tool list (built-in tools + bot slash commands)
     const dynamicTools = [...aiToolDefinitions];
 
@@ -236,7 +371,7 @@ module.exports = async function onMessageCreate(message) {
         const messages = [
           {
             role: "system",
-            content: `You are Oakawol Bot, a helpful Discord server assistant. Always use the tools provided — never refuse an action if a matching tool exists.
+            content: `You are Oakawol Bot, a helpful Discord server assistant. Always use the tools provided — never refuse an action if a matching tool exists.${memoryPrompt}
 
 Available bot commands (use via cmd_ tools):
 - cmd_add_money / cmd_remove_money: Manage a user's server balance. Pass args as "<number> <userId>"

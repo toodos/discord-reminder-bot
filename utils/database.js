@@ -80,6 +80,14 @@ db.exec(`
         message TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS brain_memories (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        scope       TEXT NOT NULL,
+        scopeId     TEXT,
+        content     TEXT NOT NULL,
+        timestamp   INTEGER NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS upi_info (
         userId      TEXT NOT NULL,
         guildId     TEXT NOT NULL,
@@ -117,6 +125,16 @@ const stmts = {
     setMemory:      db.prepare('INSERT INTO memory (slot, message) VALUES (?, ?) ON CONFLICT(slot) DO UPDATE SET message=excluded.message'),
     getMemory:      db.prepare('SELECT message FROM memory WHERE slot = ?'),
     getAllMemory:    db.prepare('SELECT * FROM memory'),
+
+    // Brain memories
+    addBrainMemory: db.prepare('INSERT INTO brain_memories (scope, scopeId, content, timestamp) VALUES (?, ?, ?, ?)'),
+    getAllRelevantBrainMemories: db.prepare(`
+        SELECT * FROM brain_memories 
+        WHERE (scope = 'global')
+           OR (scope = 'user' AND scopeId = ?)
+           OR (scope = 'server' AND scopeId = ?)
+        ORDER BY timestamp ASC
+    `),
 
     // UPI
     setUpi:         db.prepare('INSERT INTO upi_info (userId, guildId, upiId, qrUrl, savedAt) VALUES (?, ?, ?, ?, ?) ON CONFLICT(userId, guildId) DO UPDATE SET upiId=excluded.upiId, qrUrl=excluded.qrUrl, savedAt=excluded.savedAt'),
@@ -276,6 +294,32 @@ function getAllMemory() {
     return Object.fromEntries(rows.map(r => [r.slot, r.message]));
 }
 
+// ─── Brain Memories ────────────────────────────────────────────────────────────
+
+function addBrainMemory(scope, scopeId, content) {
+    stmts.addBrainMemory.run(scope, scopeId || null, content, Date.now());
+}
+
+function deleteBrainMemoryByKeyword(scope, scopeId, keyword) {
+    const likePattern = `%${keyword}%`;
+    if (scope === 'global') {
+        return db.prepare("DELETE FROM brain_memories WHERE scope = 'global' AND content LIKE ?").run(likePattern);
+    } else {
+        return db.prepare("DELETE FROM brain_memories WHERE scope = ? AND scopeId = ? AND content LIKE ?").run(scope, scopeId, likePattern);
+    }
+}
+
+function getBrainMemories(scope, scopeId) {
+    if (scope === 'global') {
+        return db.prepare("SELECT * FROM brain_memories WHERE scope = 'global'").all();
+    }
+    return db.prepare("SELECT * FROM brain_memories WHERE scope = ? AND scopeId = ?").all(scope, scopeId);
+}
+
+function getAllRelevantBrainMemories(userId, guildId) {
+    return stmts.getAllRelevantBrainMemories.all(userId || null, guildId || null);
+}
+
 // ─── UPI ─────────────────────────────────────────────────────────────────────
 
 function setUpi(userId, guildId, upiId, qrUrl) {
@@ -308,6 +352,8 @@ module.exports = {
     isBlacklisted,
     // Memory
     setMemory, getMemory, getAllMemory,
+    // Brain Memories
+    addBrainMemory, deleteBrainMemoryByKeyword, getBrainMemories, getAllRelevantBrainMemories,
     // UPI
     setUpi, getUpi, deleteUpi, getAllUpi,
 };

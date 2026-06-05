@@ -649,6 +649,66 @@ const aiToolDefinitions = [
             description: 'Lists all currently stored memories and their slot numbers.',
             parameters: { type: 'object', properties: {} }
         }
+    },
+    // ---- BRAIN MEMORY TOOLS ----
+    {
+        type: 'function',
+        function: {
+            name: 'remember_fact',
+            description: 'Saves an important fact or instruction into the bot\'s long-term memory (brain). Use "user" (specific to the user speaking), "server" (specific to the current Discord server), or "global" (bot-wide). Use this to remember user details, server preferences, or bot-wide instructions. ONLY use "server" or "global" if you are an Administrator.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    scope: { type: 'string', enum: ['user', 'server', 'global'], description: 'The scope/target of the memory.' },
+                    fact: { type: 'string', description: 'The fact, preference, detail, or instruction to remember.' }
+                },
+                required: ['scope', 'fact']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'forget_fact',
+            description: 'Removes or clears matching facts from the bot\'s long-term memory (brain). Specify the scope and a keyword that matches the fact to delete.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    scope: { type: 'string', enum: ['user', 'server', 'global'], description: 'The scope where the memory is saved.' },
+                    keyword: { type: 'string', description: 'A keyword or snippet matching the fact to be deleted.' }
+                },
+                required: ['scope', 'keyword']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_brain_memories',
+            description: 'Lists stored facts and instructions in the bot\'s long-term memory (brain) for a specific scope.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    scope: { type: 'string', enum: ['user', 'server', 'global', 'all'], description: 'The scope to list memories for.' }
+                },
+                required: ['scope']
+            }
+        }
+    },
+    // ---- WEBPAGE READER ----
+    {
+        type: 'function',
+        function: {
+            name: 'fetch_webpage',
+            description: 'Fetches the main readable text content of a specified webpage/URL. Use this to read documentation, articles, or links shared by users.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    url: { type: 'string', description: 'The absolute HTTP/HTTPS URL of the webpage to fetch.' }
+                },
+                required: ['url']
+            }
+        }
     }
 ];
 
@@ -673,6 +733,20 @@ async function executeTool(tName, args, message) {
             
             if (!isAdmin) {
                 return `Error: Action denied. The user does not have administrator permissions. You are not allowed to give sensitive information or channel names or make announcements to non-admins.`;
+            }
+        }
+
+        if (['remember_fact', 'forget_fact', 'list_brain_memories'].includes(tName)) {
+            const scope = args.scope;
+            if (scope === 'server' || scope === 'global' || scope === 'all') {
+                if (!message.guild) return `Error: Server/global memories can only be managed in a server.`;
+                const config = db.getGuildConfig(message.guild.id);
+                const isAdmin = message.member.permissions.has(PermissionFlagsBits.Administrator) ||
+                    (config.adminRoleId && message.member.roles.cache.has(config.adminRoleId));
+                
+                if (!isAdmin) {
+                    return `Error: Action denied. Only Administrators can manage server-wide or global memories.`;
+                }
             }
         }
 
@@ -760,21 +834,64 @@ async function executeTool(tName, args, message) {
             }
             // WEB TOOLS
             case 'search_google': {
+                let googleResults = null;
                 try {
                     const google = require('googlethis');
                     const options = { page: 0, safe: false, additional_params: { hl: 'en' } };
                     const response = await google.search(args.query, options);
+                    if (response && response.results && response.results.length > 0) {
+                        googleResults = response.results.slice(0, 3).map(r => `**${r.title}**\n${r.description}\n<${r.url}>`).join('\n\n');
+                    }
+                } catch (e) {
+                    console.warn("Google Search failed, falling back to DuckDuckGo:", e.message);
+                }
+                
+                if (googleResults) {
+                    return `Here are the top results from Google for "${args.query}":\n\n${googleResults}`;
+                }
+                
+                // Fallback to DuckDuckGo
+                try {
+                    const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(args.query)}`;
+                    const ddgRes = await fetch(ddgUrl, {
+                        headers: { 
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' 
+                        }
+                    });
+                    if (!ddgRes.ok) throw new Error(`Status ${ddgRes.status}`);
+                    const html = await ddgRes.text();
                     
-                    if (!response || !response.results || response.results.length === 0) {
-                        return `I couldn't find any results for that on Google. 🧊`;
+                    const matches = [];
+                    const bodyRegex = /<div class="result__body">([\s\S]*?)<\/div>/gi;
+                    let match;
+                    while ((match = bodyRegex.exec(html)) !== null && matches.length < 3) {
+                        const body = match[1];
+                        const linkMatch = body.match(/<a class="result__url" href="([^"]+)"/i);
+                        const snippetMatch = body.match(/<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i) || body.match(/<div class="result__snippet">([\s\S]*?)<\/div>/i);
+                        
+                        const rawUrl = linkMatch ? linkMatch[1] : '';
+                        let cleanedUrl = rawUrl;
+                        if (rawUrl.includes('uddg=')) {
+                            const params = new URLSearchParams(rawUrl.split('?')[1]);
+                            cleanedUrl = params.get('uddg') || rawUrl;
+                        }
+                        
+                        const title = body.match(/<a class="result__a" href="[^"]+">([\s\S]*?)<\/a>/i)?.[1]?.replace(/<[^>]+>/g, '').trim() || 'No Title';
+                        const description = snippetMatch?.[1]?.replace(/<[^>]+>/g, '').trim() || 'No Description';
+                        
+                        if (cleanedUrl) {
+                            matches.push(`**${title}**\n${description}\n<${cleanedUrl}>`);
+                        }
                     }
                     
-                    const topResults = response.results.slice(0, 3).map(r => `**${r.title}**\n${r.description}\n<${r.url}>`).join('\n\n');
-                    return `Here are the top results from Google for "${args.query}":\n\n${topResults}`;
-                } catch (e) {
-                    console.error("Google Search Error:", e);
-                    return `There was an error searching Google. 🧊`;
+                    if (matches.length > 0) {
+                        return `Here are the top results from DuckDuckGo for "${args.query}":\n\n${matches.join('\n\n')}`;
+                    }
+                } catch (ddgErr) {
+                    console.error("DuckDuckGo Fallback Search Error:", ddgErr);
                 }
+                
+                return `I couldn't find any results for that on Google or DuckDuckGo. 🧊`;
             }
             case 'search_reddit': {
                 const res = await fetch(`https://www.reddit.com/r/${args.subreddit}/hot.json?limit=3`).then(r => r.json()).catch(() => null);
@@ -1090,6 +1207,104 @@ async function executeTool(tName, args, message) {
                 if (keys.length === 0) return `My long-term memory is currently empty. 🌱`;
                 const list = keys.map(slot => `• **Slot ${slot}**: ${all[slot].substring(0, 50)}${all[slot].length > 50 ? '...' : ''}`).join('\n');
                 return `Here are my stored memories:\n\n${list}`;
+            }
+            // ---- BRAIN MEMORY TOOLS ----
+            case 'remember_fact': {
+                const scopeId = args.scope === 'user' ? message.author.id : (args.scope === 'server' ? message.guild?.id : null);
+                db.addBrainMemory(args.scope, scopeId, args.fact);
+                return `Successfully saved to ${args.scope} long-term memory! 🧠✨`;
+            }
+            case 'forget_fact': {
+                const scopeId = args.scope === 'user' ? message.author.id : (args.scope === 'server' ? message.guild?.id : null);
+                const deleted = db.deleteBrainMemoryByKeyword(args.scope, scopeId, args.keyword);
+                if (deleted.changes === 0) {
+                    return `I couldn't find any memories in the ${args.scope} scope matching "${args.keyword}". 🧊`;
+                }
+                return `Successfully deleted ${deleted.changes} matching memories from ${args.scope} scope! 🗑️✨`;
+            }
+            case 'list_brain_memories': {
+                if (args.scope === 'all') {
+                    const userM = db.getBrainMemories('user', message.author.id);
+                    const serverM = message.guild ? db.getBrainMemories('server', message.guild.id) : [];
+                    const globalM = db.getBrainMemories('global', null);
+                    
+                    let out = "🧠 **My Stored Brain Memories:**\n\n";
+                    if (globalM.length > 0) out += `**[Global]:**\n${globalM.map(m => `• ${m.content}`).join('\n')}\n\n`;
+                    if (serverM.length > 0) out += `**[Server]:**\n${serverM.map(m => `• ${m.content}`).join('\n')}\n\n`;
+                    if (userM.length > 0) out += `**[User (${message.author.username})]:**\n${userM.map(m => `• ${m.content}`).join('\n')}\n\n`;
+                    
+                    if (globalM.length === 0 && serverM.length === 0 && userM.length === 0) {
+                        return "My brain is currently empty! 🌱";
+                    }
+                    return out.trim();
+                } else {
+                    const scopeId = args.scope === 'user' ? message.author.id : (args.scope === 'server' ? message.guild?.id : null);
+                    const list = db.getBrainMemories(args.scope, scopeId);
+                    if (list.length === 0) {
+                        return `I have no memories stored in the ${args.scope} scope. 🌱`;
+                    }
+                    const scopeLabel = args.scope === 'user' ? `User (${message.author.username})` : (args.scope === 'server' ? 'Server' : 'Global');
+                    return `🧠 **My Stored ${scopeLabel} Memories:**\n\n` + list.map(m => `• ${m.content}`).join('\n');
+                }
+            }
+            // ---- WEBPAGE READER ----
+            case 'fetch_webpage': {
+                try {
+                    const url = args.url;
+                    const parsedUrl = new URL(url);
+                    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+                        return "Error: Invalid protocol. Only http and https URLs can be read.";
+                    }
+                    
+                    await message.channel.sendTyping();
+                    
+                    const response = await fetch(url, {
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        return `Error: Failed to fetch webpage. Status code: ${response.status} ${response.statusText}`;
+                    }
+                    
+                    const html = await response.text();
+                    let cleaned = html
+                        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+                        .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+                        .replace(/<noscript\b[^<]*(?:(?!<\/noscript>)<[^<]*)*<\/noscript>/gi, '')
+                        .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+                        .replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gi, '')
+                        .replace(/<\/h[1-6]>/gi, '\n\n')
+                        .replace(/<\/p>/gi, '\n\n')
+                        .replace(/<\/div>/gi, '\n')
+                        .replace(/<\/li>/gi, '\n')
+                        .replace(/<br\s*\/?>/gi, '\n')
+                        .replace(/<[^>]+>/g, '')
+                        .replace(/&nbsp;/g, ' ')
+                        .replace(/&amp;/g, '&')
+                        .replace(/&lt;/g, '<')
+                        .replace(/&gt;/g, '>')
+                        .replace(/&quot;/g, '"')
+                        .replace(/&#39;/g, "'")
+                        .replace(/[ \t]+/g, ' ')
+                        .replace(/\n\s*\n+/g, '\n\n')
+                        .trim();
+                    
+                    if (cleaned.length === 0) {
+                        return "The webpage fetched successfully, but no readable text could be extracted.";
+                    }
+                    
+                    if (cleaned.length > 4000) {
+                        cleaned = cleaned.substring(0, 4000) + "\n\n[Content truncated due to length limits...]";
+                    }
+                    
+                    return `--- Content of webpage <${url}> ---\n\n${cleaned}`;
+                } catch (err) {
+                    console.error("fetch_webpage error:", err);
+                    return `Error reading webpage: ${err.message}`;
+                }
             }
             default:
                 return `I tried to use a tool but didn't recognize it.`;
