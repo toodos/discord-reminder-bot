@@ -251,8 +251,10 @@ module.exports = async function onMessageCreate(message) {
               }
               
               if (result.working && (!result.isReddit || !result.removed)) {
-                // React with check mark
-                await message.react(CHECK_EMOJI).catch(() => {});
+                // React with check mark with 8 second delay
+                setTimeout(() => {
+                  message.react(CHECK_EMOJI).catch(() => {});
+                }, 8000);
               } else {
                 // React with cross mark
                 await message.react('❌').catch(() => {});
