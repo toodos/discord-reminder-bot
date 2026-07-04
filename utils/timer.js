@@ -35,7 +35,7 @@ function formatDuration(ms) {
         d && `${d}d`,
         h && `${h}h`,
         m && `${m}m`,
-        (!d && !h && s) && `${s}s`,
+        s && `${s}s`,
     ].filter(Boolean).join(' ') || '0s';
 }
 

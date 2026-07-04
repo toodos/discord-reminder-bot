@@ -158,6 +158,12 @@ module.exports = async function onMessageCreate(message) {
         editReply: async (data) => message.channel.send(data),
         followUp: async (data) => message.channel.send(data),
         options: {
+          getSubcommand: () => {
+            if (args.length > 0) {
+              return args.shift().toLowerCase();
+            }
+            return null;
+          },
           getString: (name) => {
             if (["prompt", "message", "description", "title"].includes(name)) {
               const res = args.join(" ");
@@ -473,6 +479,17 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
                     return message.channel.send(data);
                   },
                   options: {
+                    getSubcommand: () => {
+                      if (argsObj.args) {
+                        const argArr = argsObj.args.trim().split(/\s+/);
+                        if (argArr.length > 0) {
+                          const sub = argArr.shift().toLowerCase();
+                          argsObj.args = argArr.join(" ");
+                          return sub;
+                        }
+                      }
+                      return null;
+                    },
                     getString: (name) => {
                       if (name === "time") {
                         const match = (argsObj.args || "").match(

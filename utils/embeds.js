@@ -7,16 +7,16 @@ const path = require("path");
 
 // ── Palette ──────────────────────────────────────────────────────────────────
 const COLORS = {
-  success: 0x4caf50, // clean indicator green
-  danger: 0xf44336, // alert amber/red
-  warning: 0xffeb3b, // soft warning yellow
-  info: 0x2196f3, // silicon blue
-  pink: 0xff4081, // vibrant pink
-  gold: 0xffc107, // crisp gold
-  mint: 0x81c784, // soft mint
-  sky: 0x03a9f4, // friendly sky blue
-  peach: 0xffab40, // light orange
-  lilac: 0xba68c8, // AI violet
+  success: 0x00F5D4, // Neon Mint/Teal
+  danger: 0xFF0055,  // Neon Cyber Red/Pink
+  warning: 0xFFBE0B, // Neon Amber Gold
+  info: 0x3A86FF,    // Premium Silicon Blue
+  pink: 0xFF007F,    // Electric Hot Pink
+  gold: 0xFFB703,    // Cyber Gold
+  mint: 0x06D6A0,    // Mint Green
+  sky: 0x00B4D8,     // Sky Cyan
+  peach: 0xFF9F1C,   // Neon Peach
+  lilac: 0x8338EC,   // Cyber Violet / AI Purple
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -24,9 +24,9 @@ function asset(name) {
   return new AttachmentBuilder(path.join(__dirname, `../assets/${name}`));
 }
 
-/** A polite, dotted delimiter line */
+/** A clean premium divider line */
 function divider() {
-  return "◦ ── ◦ ── ◦ ── ◦ ── ◦";
+  return "✦ ──── ✦ ──── ✦ ──── ✦";
 }
 
 /** Pick a random cute robotic footer message */
@@ -68,12 +68,12 @@ function base(color = COLORS.sky) {
 function errorEmbed(content) {
   return new EmbedBuilder()
     .setColor(COLORS.danger)
-    .setTitle("⚠️ SYSTEM ALERT")
+    .setTitle("⚠️  System Alert")
     .setDescription(
       `> 🤖 *I encountered an unexpected variable...*\n\n` +
         `> ${content}\n\n` +
         `*${divider()}*\n` +
-        `*Please check your input parameters and try again!*`,
+        `*Please verify your input parameters and try again.*`,
     )
     .setFooter({
       text: "🔧 Diagnostic routines deployed.",
@@ -97,11 +97,10 @@ function reminderSetEmbed(targetUser, message, timeStr, targetChannel) {
   return {
     file: asset("reminder.png"),
     embed: base(COLORS.lilac)
-      .setTitle("⏰ ALARM LOGGED SUCCESSFULLY")
+      .setTitle("⏰  Reminder Configured")
       .setThumbnail("attachment://reminder.png")
       .setDescription(
-        `*< saving coordinates to internal memory >*\n\n` +
-          `Hello! I have registered your request. 📋\n` +
+        `*📡 Transmission established. Saved coordinates to memory.*\n\n` +
           `I will gently remind **${targetUser.username}** in exactly **\`${timeStr}\`**!\n\n` +
           `*${divider()}*`,
       )
@@ -126,17 +125,15 @@ function reminderFiredEmbed(message, initiatorTag) {
     file: asset("reminder.png"),
     embed: new EmbedBuilder()
       .setColor(COLORS.warning)
-      .setTitle("⏰ BEEP! SCHEDULED REMINDER")
+      .setTitle("🛎️  Incoming Reminder")
       .setThumbnail("attachment://reminder.png")
       .setDescription(
-        `*< pinging target user >*\n\n` +
-          `Excuse me! 🤖 I have a scheduled delivery for you:\n\n` +
-          `> ### 🛎️ ${message}\n\n` +
-          `*${divider()}*\n` +
-          `*Task completed. Awaiting further instructions.*`,
+        `*⚡ Automated ping to target user.*\n\n` +
+          `> **${message}**\n\n` +
+          `*${divider()}*`,
       )
       .setFooter({
-        text: `✨ Scheduled by ${initiatorTag} • Delivered precisely on time.`,
+        text: `✨ Scheduled by ${initiatorTag} • Awaiting further tasks.`,
       })
       .setTimestamp(),
   };
@@ -149,19 +146,18 @@ function cooldownSetEmbed(targetUser, timeStr, endTime, initiator) {
   return {
     file: asset("cooldown.png"),
     embed: base(COLORS.info)
-      .setTitle("🔋 FORCED RECHARGE INITIATED")
+      .setTitle("🔌  Recharge Cycle Initiated")
       .setThumbnail("attachment://cooldown.png")
       .setDescription(
-        `*< dimming optical sensors >*\n\n` +
-          `🔌 **${targetUser.username}** has been assigned to the charging station.\n` +
-          `All active functions are paused until the recharge cycle completes. 💤\n\n` +
+        `*🔋 Unit offline. Initiating forced recharge.*\n\n` +
+          `**${targetUser.username}** has been sent to the charging station. All functions are suspended until completion.\n\n` +
           `*${divider()}*`,
       )
       .addFields(
-        { name: "🔋  Charge Time", value: `\`${timeStr}\``, inline: true },
+        { name: "⏳  Duration", value: `\`${timeStr}\``, inline: true },
         { name: "⏱️  End Cycle", value: `<t:${unix}:T>`, inline: true },
-        { name: "⏳  Time Left", value: `<t:${unix}:R>`, inline: true },
-        { name: "🛡️  Assigned By", value: `${initiator}`, inline: true },
+        { name: "⌛  Time Left", value: `<t:${unix}:R>`, inline: true },
+        { name: "🛡️  Authorized By", value: `${initiator}`, inline: true },
       ),
   };
 }
@@ -170,13 +166,11 @@ function cooldownExpiredEmbed(mention) {
   return {
     file: asset("cooldown.png"),
     embed: base(COLORS.success)
-      .setTitle("✨ RECHARGE CYCLE COMPLETE")
+      .setTitle("✨  Recharge Cycle Complete")
       .setThumbnail("attachment://cooldown.png")
       .setDescription(
-        `*< initializing main subroutines >*\n\n` +
-          `Good news, ${mention}!\n` +
-          `Your battery levels are back to 100%. All systems reflect optimal health.\n` +
-          `You are cleared to resume normal activities. 🤖💻\n\n` +
+        `*⚡ Power levels at 100%. Main core initialized.*\n\n` +
+          `Welcome back, ${mention}! All diagnostics indicate optimal unit performance.\n\n` +
           `*${divider()}*`,
       ),
   };
@@ -186,12 +180,11 @@ function cooldownRemovedEmbed(targetUser) {
   return {
     file: asset("cooldown.png"),
     embed: base(COLORS.mint)
-      .setTitle("🔓 OVERRIDE: RECHARGE ABORTED")
+      .setTitle("🔓  Override: Recharge Aborted")
       .setThumbnail("attachment://cooldown.png")
       .setDescription(
-        `*< emergency wake sequence triggered >*\n\n` +
-          `⚡ A system administrator has interrupted the sleep cycle for ${targetUser}.\n` +
-          `Auxiliary power has been instantly restored. Welcome back! 🤖\n\n` +
+        `*⚠️ Emergency wake sequence executed by Administrator.*\n\n` +
+          `Auxiliary backup power has been routed to **${targetUser}**. Sleep cycle terminated.\n\n` +
           `*${divider()}*`,
       ),
   };
@@ -218,10 +211,9 @@ function balanceEmbed(
       })
       .setThumbnail("attachment://balance.png")
       .setDescription(
-        `*< accessing secure banking API >*\n\n` +
-          `### 🌐  The Elite Contributor Board\n` +
-          (leaderboardStr ||
-             "*No active user records found... Beep!* 🤖") +
+        `*🔑 Accessing ledger databases... Status: Authorized.*\n\n` +
+          `### 🏆  Top Contributor Board\n` +
+          (leaderboardStr || "*No active user records found.*") +
           `\n\n*${divider()}*`,
       )
       .addFields(
@@ -259,49 +251,19 @@ function addMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
   return {
     file: asset("money.png"),
     embed: base(COLORS.success)
-      .setTitle("💵 FUNDS SUCCESSFULLY ALLOCATED")
+      .setTitle("💵  Funds Successfully Deposited")
       .setThumbnail("attachment://money.png")
       .setDescription(
-        `*< verifying incoming transaction >*\n\n` +
-          `Beep! **₹${amount.toLocaleString()}** has been successfully deposited into the account of ${targetUser}.\n\n` +
+        `*📥 Ledger updated. Transaction verified.*\n\n` +
+          `Deposited **₹${amount.toLocaleString()}** to the account of ${targetUser}.\n\n` +
           (promoted
-            ? `🌟 *System note: Unit Status upgraded! Great job!* 🤖\n\n`
+            ? `🌟 *System notification: Unit Status upgraded!* \n\n`
             : "") +
           `*${divider()}*`,
       )
       .addFields(
         {
           name: "💾  Total Holdings",
-          value: `\`₹${oldBalance.toLocaleString()}\`  →  **₹${newBalance.toLocaleString()}**`,
-          inline: true,
-        },
-        { name: "🏅  Unit Status", value: tierLine, inline: true },
-      ),
-  };
-}
-
-function removeMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
-  const tier = getTier(newBalance);
-  const oldTier = getTier(oldBalance);
-  const demoted = oldTier.name !== tier.name;
-  const tierLine = demoted
-    ? `${oldTier.icon} ${oldTier.name}  →  ${tier.icon} ${tier.name}`
-    : `${tier.icon} ${tier.name}`;
-
-  return {
-    file: asset("money.png"),
-    embed: base(COLORS.peach)
-      .setTitle("💸 FUNDS WITHDRAWN")
-      .setThumbnail("attachment://money.png")
-      .setDescription(
-        `*< verifying outgoing transaction >*\n\n` +
-          `Notice: **₹${amount.toLocaleString()}** has been debited from the account of ${targetUser}.\n` +
-          `The central ledger has been updated accordingly. 📉\n\n` +
-          `*${divider()}*`,
-      )
-      .addFields(
-        {
-          name: "💾  Remaining Balance",
           value: `\`₹${oldBalance.toLocaleString()}\`  →  **₹${newBalance.toLocaleString()}**`,
           inline: true,
         },
@@ -329,10 +291,10 @@ function memoryListEmbed(slots) {
 
   return new EmbedBuilder()
     .setColor(COLORS.sky)
-    .setTitle("🗄️ INTERNAL MEMORY ARCHIVE")
+    .setTitle("🗄️  Internal Storage Archive")
     .setDescription(
-      `*< accessing local storage volumes >*\n\n` +
-        `Here is the data currently stored in my drives:\n\n` +
+      `*💾 Reading local database sectors... Status: Nominal.*\n\n` +
+        `Here is the data currently cached in my drives:\n\n` +
         `${lines}\n\n` +
         `*${divider()}*`,
     )
@@ -340,17 +302,46 @@ function memoryListEmbed(slots) {
     .setTimestamp();
 }
 
+function removeMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
+  const tier = getTier(newBalance);
+  const oldTier = getTier(oldBalance);
+  const demoted = oldTier.name !== tier.name;
+  const tierLine = demoted
+    ? `${oldTier.icon} ${oldTier.name}  →  ${tier.icon} ${tier.name}`
+    : `${tier.icon} ${tier.name}`;
+
+  return {
+    file: asset("money.png"),
+    embed: base(COLORS.peach)
+      .setTitle("💸  Funds Successfully Debited")
+      .setThumbnail("attachment://money.png")
+      .setDescription(
+        `*📤 Ledger updated. Transaction verified.*\n\n` +
+          `Debited **₹${amount.toLocaleString()}** from the account of ${targetUser}.\n\n` +
+          `*${divider()}*`,
+      )
+      .addFields(
+        {
+          name: "💾  Remaining Balance",
+          value: `\`₹${oldBalance.toLocaleString()}\`  →  **₹${newBalance.toLocaleString()}**`,
+          inline: true,
+        },
+        { name: "🏅  Unit Status", value: tierLine, inline: true },
+      ),
+  };
+}
+
 // ── Ticket Embeds ─────────────────────────────────────────────────────────────
 
 function ticketWelcomeEmbed(user, count, category, answers) {
   const embed = new EmbedBuilder()
     .setColor(COLORS.info)
-    .setTitle(`📝 SUPPORT TICKET LOGGED  ✦ Ticket #${count}`)
+    .setTitle(`✉️  Support Ticket Logged  •  #${count}`)
     .setDescription(
-      `*< opening communication channel >*\n\n` +
-        `Hello ${user}! 🤖 Your request has been securely filed.\n` +
-        `Our human representatives have been notified and will be right with you.\n` +
-        `Please detail any additional context while you wait. ☕\n\n` +
+      `*📡 Communication channel established.*\n\n` +
+        `Hello ${user}! Your request has been securely filed.\n` +
+        `Our support crew has been paged and will join the terminal shortly.\n` +
+        `Please detail your request while you wait. ☕\n\n` +
         `*${divider()}*`,
     )
     .setThumbnail(user.displayAvatarURL({ dynamic: true }))
@@ -360,10 +351,10 @@ function ticketWelcomeEmbed(user, count, category, answers) {
         value: `${category.emoji} ${category.name}`,
         inline: true,
       },
-      { name: "🔗  Requested By", value: `${user}`, inline: true },
+      { name: "👤  Requested By", value: `${user}`, inline: true },
     )
     .setFooter({
-      text: "🤖 Oakawol Automation Unit • Client Support Division",
+      text: "🤖 Oakawol Automated Support Unit",
     })
     .setTimestamp();
 
@@ -371,7 +362,7 @@ function ticketWelcomeEmbed(user, count, category, answers) {
   if (keys.length > 0) {
     embed.addFields({
       name: "\u200B",
-      value: `*${divider()}*\n📋  **Intake Form Data** *(for our records)* ✨`,
+      value: `*${divider()}*\n📋  **Intake Form Data** *(Pre-filled Details)*`,
     });
     embed.addFields(
       keys.map((k) => ({
@@ -391,12 +382,11 @@ function categoryListEmbed(categories) {
 
   return new EmbedBuilder()
     .setColor(COLORS.sky)
-    .setTitle("💻 SUPPORT TERMINAL DIRECTORY")
+    .setTitle("💻  Support Terminal Directory")
     .setDescription(
-      `*< loading department interface >*\n\n` +
-        `Welcome to the support terminal! 🤖\n` +
-        `Please select the department you wish to contact below.\n\n` +
-        `${rows || "*No active departments discovered. 💤*"}\n\n` +
+      `*🌐 Querying active departments...*\n\n` +
+        `Select the support department you wish to contact below:\n\n` +
+        `${rows || "*No active departments found.*"}\n\n` +
         `*${divider()}*`,
     )
     .setFooter({ text: footerQuip() })
