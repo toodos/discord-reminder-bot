@@ -234,10 +234,11 @@ module.exports = async function onMessageCreate(message) {
     const ticket = db.getTicket(message.channel.id);
     if (ticket) {
       const config = db.getGuildConfig(message.guild.id);
-      const isAdmin =
+      const isAdmin = message.member && (
         message.member.permissions.has(PermissionFlagsBits.Administrator) ||
         (config.adminRoleId &&
-          message.member.roles.cache.has(config.adminRoleId));
+          message.member.roles.cache.has(config.adminRoleId))
+      );
       if (!isAdmin) {
         const urlMatch = message.content.match(URL_REGEX);
         if (urlMatch) {
@@ -443,7 +444,13 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
           let executedSilently = false;
 
           for (const toolCall of responseMessage.tool_calls) {
-            const argsObj = JSON.parse(toolCall.function.arguments);
+            let argsObj;
+            try {
+              argsObj = JSON.parse(toolCall.function.arguments || "{}");
+            } catch (err) {
+              console.warn(`[AI Orchestrator] Failed to parse tool arguments:`, err.message);
+              argsObj = {};
+            }
             const tName = toolCall.function.name;
             let toolResult = "";
 

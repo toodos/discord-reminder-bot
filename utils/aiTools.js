@@ -728,8 +728,10 @@ async function executeTool(tName, args, message) {
             if (!message.guild) return `Error: This tool can only be used in a server.`;
             
             const config = db.getGuildConfig(message.guild.id);
-            const isAdmin = message.member.permissions.has(PermissionFlagsBits.Administrator) ||
-                (config.adminRoleId && message.member.roles.cache.has(config.adminRoleId));
+            const isAdmin = message.member && (
+                message.member.permissions.has(PermissionFlagsBits.Administrator) ||
+                (config.adminRoleId && message.member.roles.cache.has(config.adminRoleId))
+            );
             
             if (!isAdmin) {
                 return `Error: Action denied. The user does not have administrator permissions. You are not allowed to give sensitive information or channel names or make announcements to non-admins.`;
@@ -741,8 +743,10 @@ async function executeTool(tName, args, message) {
             if (scope === 'server' || scope === 'global' || scope === 'all') {
                 if (!message.guild) return `Error: Server/global memories can only be managed in a server.`;
                 const config = db.getGuildConfig(message.guild.id);
-                const isAdmin = message.member.permissions.has(PermissionFlagsBits.Administrator) ||
-                    (config.adminRoleId && message.member.roles.cache.has(config.adminRoleId));
+                const isAdmin = message.member && (
+                    message.member.permissions.has(PermissionFlagsBits.Administrator) ||
+                    (config.adminRoleId && message.member.roles.cache.has(config.adminRoleId))
+                );
                 
                 if (!isAdmin) {
                     return `Error: Action denied. Only Administrators can manage server-wide or global memories.`;
@@ -947,9 +951,9 @@ async function executeTool(tName, args, message) {
                 return `**Trivia Category: ${t.category}**\n*Difficulty: ${t.difficulty}*\n\n**Q:** ${t.question.replace(/&quot;/g, '"').replace(/&#039;/g, "'")}\n\n||**A:** ${t.correct_answer.replace(/&quot;/g, '"').replace(/&#039;/g, "'")}||`;
             }
             case 'get_random_quote': {
-                const res = await fetch(`https://api.quotable.io/random`).then(r => r.json()).catch(() => null);
-                if (!res || !res.content) return `I couldn't find a quote. 🧊`;
-                return `"${res.content}" \n- **${res.author}**`;
+                const res = await fetch(`https://zenquotes.io/api/random`).then(r => r.json()).catch(() => null);
+                if (!res || !res[0] || !res[0].q) return `I couldn't find a quote. 🧊`;
+                return `"${res[0].q}" \n- **${res[0].a}**`;
             }
             case 'search_github_user': {
                 const res = await fetch(`https://api.github.com/users/${encodeURIComponent(args.username)}`).then(r => r.json()).catch(() => null);
