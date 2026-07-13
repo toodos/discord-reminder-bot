@@ -12,6 +12,28 @@ const URL_REGEX = /https?:\/\/[^\s]+/;
 
 async function verifyLinkStatus(url) {
   try {
+    // Check for Discord Invite links
+    const inviteMatch = url.match(/(?:https?:\/\/)?(?:[a-zA-Z0-9\-]+\.)?(?:discord\.gg|discord(?:app)?\.com\/invite)\/([a-zA-Z0-9\-]+)/i);
+    if (inviteMatch) {
+      const inviteCode = inviteMatch[1];
+      const inviteRes = await fetch(`https://discord.com/api/v10/invites/${inviteCode}?with_counts=true`).catch(() => null);
+      if (!inviteRes || !inviteRes.ok) {
+        return { working: false, reason: 'Invalid or expired Discord invite.' };
+      }
+      return { working: true, isInvite: true };
+    }
+
+    // Check for YouTube links
+    const youtubeMatch = url.match(/(?:https?:\/\/)?(?:[a-zA-Z0-9\-]+\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9\-_]+)/i);
+    if (youtubeMatch) {
+      const videoId = youtubeMatch[1];
+      const oembedRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`).catch(() => null);
+      if (!oembedRes || !oembedRes.ok) {
+        return { working: false, reason: 'Video not found or private.' };
+      }
+      return { working: true, isYouTube: true };
+    }
+
     const response = await fetch(url, {
       method: 'GET',
       redirect: 'follow',
@@ -107,13 +129,13 @@ async function verifyLinkStatus(url) {
   }
 }
 
-// Provider: Pollinations (Unified OpenAI-compatible API)
-// Models are tried in order; providers whose API key is missing are skipped.
+// Provider configurations and failover model hierarchy
 const AI_MODELS = [
-  { provider: "pollinations", model: "openai-fast", supportsTools: true  }, // GPT-4o-mini
-  { provider: "pollinations", model: "openai",      supportsTools: true  }, // GPT-4o
-  { provider: "pollinations", model: "gemini-fast", supportsTools: true  }, // Gemini Flash
-  { provider: "pollinations", model: "claude-fast", supportsTools: true  }, // Claude 3.5 Haiku
+  { provider: "groq",       model: "llama-3.3-70b-versatile",          supportsTools: true  },
+  { provider: "cerebras",   model: "llama-3.3-70b",                   supportsTools: false },
+  { provider: "openrouter", model: "meta-llama/llama-3.3-70b-instruct", supportsTools: true  },
+  { provider: "openrouter", model: "anthropic/claude-3.5-sonnet",       supportsTools: true  },
+  { provider: "pollinations", model: "openai-fast",                      supportsTools: true  },
 ];
 
 function getProviderConfig(provider) {
@@ -121,6 +143,24 @@ function getProviderConfig(provider) {
     return {
       url: "https://gen.pollinations.ai/v1/chat/completions",
       key: process.env.POLLINATIONS_API_KEY,
+    };
+  }
+  if (provider === "groq") {
+    return {
+      url: "https://api.groq.com/openai/v1/chat/completions",
+      key: process.env.GROQ_API_KEY,
+    };
+  }
+  if (provider === "cerebras") {
+    return {
+      url: "https://api.cerebras.ai/v1/chat/completions",
+      key: process.env.CEREBRAS_API_KEY,
+    };
+  }
+  if (provider === "openrouter") {
+    return {
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      key: process.env.OPENROUTER_API_KEY,
     };
   }
   return { url: null, key: null };
@@ -407,12 +447,18 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
           requestBody.tool_choice = "auto";
         }
 
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        };
+        if (provider === "openrouter") {
+          headers["HTTP-Referer"] = "https://github.com/toodos/discord-reminder-bot";
+          headers["X-Title"] = "Oakawol Bot";
+        }
+
         const response = await fetch(apiUrl, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
+          headers: headers,
           body: JSON.stringify(requestBody),
         });
 
@@ -615,13 +661,19 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
             : null;
 
           try {
+            const secondHeaders = {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            };
+            if (provider === "openrouter") {
+              secondHeaders["HTTP-Referer"] = "https://github.com/toodos/discord-reminder-bot";
+              secondHeaders["X-Title"] = "Oakawol Bot";
+            }
+
             // Second API call to get final text response after tool execution
             const secondResponse = await fetch(apiUrl, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${apiKey}`,
-              },
+              headers: secondHeaders,
               body: JSON.stringify({ model: model, messages: messages }),
             });
 

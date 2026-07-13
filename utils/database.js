@@ -274,6 +274,10 @@ function getUserActiveTickets(userId, guildId) {
     return db.prepare("SELECT * FROM tickets WHERE userId = ? AND guildId = ? AND status = 'open'").all(userId, guildId);
 }
 
+function getUserTickets(userId, guildId) {
+    return db.prepare('SELECT * FROM tickets WHERE userId = ? AND guildId = ? ORDER BY createdAt DESC').all(userId, guildId);
+}
+
 function isBlacklisted(guildId, userId) {
     return !!db.prepare('SELECT 1 FROM blacklist WHERE guildId = ? AND userId = ?').get(guildId, userId);
 }
@@ -348,7 +352,7 @@ module.exports = {
     // Guild/Tickets
     getGuildConfig, setGuildConfig, incrementTicketCount,
     getCategories, getCategory, createCategory, deleteCategory,
-    createTicket, getTicket, updateTicket, getUserActiveTickets,
+    createTicket, getTicket, updateTicket, getUserActiveTickets, getUserTickets,
     isBlacklisted,
     // Memory
     setMemory, getMemory, getAllMemory,

@@ -709,6 +709,42 @@ const aiToolDefinitions = [
                 required: ['url']
             }
         }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'get_user_tickets',
+            description: 'Retrieves all support tickets opened by a user in the server, showing current status and history.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    userId: { type: 'string', description: 'The Discord user ID to look up.' }
+                },
+                required: ['userId']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'lookup_discord_user',
+            description: 'Looks up a Discord user profile by their ID (snowflake), fetching account creation date, server roles, and joined date.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    userId: { type: 'string', description: 'The Discord user ID to look up.' }
+                },
+                required: ['userId']
+            }
+        }
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'list_guild_emojis',
+            description: 'Lists all custom guild emojis available in the server, showing name and format so you can use them in your replies.',
+            parameters: { type: 'object', properties: {} }
+        }
     }
 ];
 
@@ -721,7 +757,7 @@ async function executeTool(tName, args, message) {
             'create_role', 'assign_role', 'remove_role', 'unban_user', 'get_server_info',
             'list_roles', 'list_channels', 'send_to_channel', 'pin_message', 'announce',
             'read_channel_history', 'dm_user', 'set_memory', 'get_memory', 'list_memory',
-            'send_embed', 'get_user_info', 'react_to_recent_messages'
+            'send_embed', 'get_user_info', 'react_to_recent_messages', 'get_user_tickets', 'lookup_discord_user'
         ];
 
         if (adminOnlyTools.includes(tName)) {
@@ -1309,6 +1345,58 @@ async function executeTool(tName, args, message) {
                     console.error("fetch_webpage error:", err);
                     return `Error reading webpage: ${err.message}`;
                 }
+            }
+            // ---- USER TICKETS LOOKUP ----
+            case 'get_user_tickets': {
+                if (!message.guild) return `Error: This tool can only be used in a server.`;
+                const userId = args.userId;
+                const tickets = db.getUserTickets(userId, message.guild.id);
+                
+                if (tickets.length === 0) {
+                    return `This user has not opened any tickets in this server.`;
+                }
+                
+                const lines = tickets.map(t => {
+                    const statusEmoji = t.status === 'open' ? '🟢' : '🔴';
+                    const createdStr = new Date(t.createdAt).toLocaleDateString();
+                    const claimant = t.claimantId ? `<@${t.claimantId}>` : 'Unclaimed';
+                    const closedStr = t.closedAt ? ` (Closed: ${new Date(t.closedAt).toLocaleDateString()})` : '';
+                    return `• ${statusEmoji} Channel: <#${t.channelId}> | Created: ${createdStr} | Staff: ${claimant}${closedStr} | Status: **${t.status}**`;
+                });
+                
+                return `Tickets history for <@${userId}>:\n\n${lines.join('\n')}`;
+            }
+            // ---- USER PROFILE LOOKUP ----
+            case 'lookup_discord_user': {
+                try {
+                    const user = await message.client.users.fetch(args.userId);
+                    if (!user) return `I couldn't find a user with ID ${args.userId}.`;
+                    
+                    const member = message.guild ? await message.guild.members.fetch(args.userId).catch(() => null) : null;
+                    const createdDate = new Date(user.createdTimestamp).toUTCString();
+                    const joinedDate = member ? new Date(member.joinedTimestamp).toUTCString() : 'Not in server';
+                    const rolesStr = member ? member.roles.cache.map(r => r.name).filter(n => n !== '@everyone').join(', ') || 'No roles' : 'N/A';
+                    
+                    let reply = `**User Profile Lookup for <@${user.id}>**:\n` +
+                                  `• **Username**: ${user.tag}\n` +
+                                  `• **ID**: ${user.id}\n` +
+                                  `• **Bot?**: ${user.bot ? 'Yes' : 'No'}\n` +
+                                  `• **Created Account**: ${createdDate}\n` +
+                                  `• **Joined Server**: ${joinedDate}\n`;
+                    if (member) {
+                        reply += `• **Server Roles**: ${rolesStr}\n`;
+                    }
+                    return reply;
+                } catch (err) {
+                    return `Error looking up user profile: ${err.message}`;
+                }
+            }
+            // ---- GUILD EMOJIS LIST ----
+            case 'list_guild_emojis': {
+                if (!message.guild) return `Error: This tool can only be used within a server.`;
+                const emojis = message.guild.emojis.cache.map(e => `${e.name}: <${e.animated ? 'a' : ''}:${e.name}:${e.id}>`);
+                if (emojis.length === 0) return `This server has no custom emojis.`;
+                return `Here are the custom emojis available in this server:\n` + emojis.slice(0, 50).join('\n') + (emojis.length > 50 ? `\n*(and ${emojis.length - 50} more...)*` : '');
             }
             default:
                 return `I tried to use a tool but didn't recognize it.`;
