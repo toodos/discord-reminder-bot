@@ -172,11 +172,11 @@ const aiToolDefinitions = [
         type: 'function',
         function: {
             name: 'search_google',
-            description: 'Searches Google for a query and returns the top results and snippets.',
+            description: 'Searches Google, news feeds, and the live web for real-time information, articles, and current events. ALWAYS use this tool whenever the user asks for real-time news, current events, recent updates, or facts beyond your training cutoff.',
             parameters: {
                 type: 'object',
                 properties: {
-                    query: { type: 'string', description: 'The search query to look up on Google.' }
+                    query: { type: 'string', description: 'The search query to look up (e.g. "latest tech news", "world news today", "current events")' }
                 },
                 required: ['query']
             }
@@ -874,64 +874,98 @@ async function executeTool(tName, args, message) {
             }
             // WEB TOOLS
             case 'search_google': {
+                const query = args.query;
+                
+                // 1. Google News RSS Feed (Fastest and most accurate for news & current events)
+                if (/news|latest|today|recent|headlines|breaking|update|sports|tech|business/i.test(query)) {
+                    try {
+                        const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+                        const res = await fetch(rssUrl);
+                        if (res.ok) {
+                            const xml = await res.text();
+                            const items = [];
+                            const itemRegex = /<item>([\s\S]*?)<\/item>/gi;
+                            let match;
+                            while ((match = itemRegex.exec(xml)) !== null && items.length < 4) {
+                                const itemXml = match[1];
+                                const title = (itemXml.match(/<title>([\s\S]*?)<\/title>/i) || [])[1] || '';
+                                const link = (itemXml.match(/<link>([\s\S]*?)<\/link>/i) || [])[1] || '';
+                                const pubDate = (itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/i) || [])[1] || '';
+                                if (title) {
+                                    const cleanTitle = title.replace(/<!\[CDATA\[(.*?)\]\]>/g, '$1').replace(/&amp;/g, '&');
+                                    items.push(`**${cleanTitle}** (${pubDate})\n<${link}>`);
+                                }
+                            }
+                            if (items.length > 0) {
+                                return `Here are the latest news headlines for "${query}":\n\n` + items.join('\n\n');
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Google News RSS Search failed:", e.message);
+                    }
+                }
+
+                // 2. Googlethis module fallback
                 let googleResults = null;
                 try {
                     const google = require('googlethis');
                     const options = { page: 0, safe: false, additional_params: { hl: 'en' } };
-                    const response = await google.search(args.query, options);
+                    const response = await google.search(query, options);
                     if (response && response.results && response.results.length > 0) {
-                        googleResults = response.results.slice(0, 3).map(r => `**${r.title}**\n${r.description}\n<${r.url}>`).join('\n\n');
+                        googleResults = response.results.slice(0, 4).map(r => `**${r.title}**\n${r.description}\n<${r.url}>`).join('\n\n');
+                    } else if (response && response.top_stories && response.top_stories.length > 0) {
+                        googleResults = response.top_stories.slice(0, 4).map(r => `**${r.title}**\n<${r.url}>`).join('\n\n');
                     }
                 } catch (e) {
                     console.warn("Google Search failed, falling back to DuckDuckGo:", e.message);
                 }
                 
                 if (googleResults) {
-                    return `Here are the top results from Google for "${args.query}":\n\n${googleResults}`;
+                    return `Here are the top web search results for "${query}":\n\n${googleResults}`;
                 }
                 
-                // Fallback to DuckDuckGo
+                // 3. DuckDuckGo HTML Fallback
                 try {
-                    const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(args.query)}`;
+                    const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
                     const ddgRes = await fetch(ddgUrl, {
                         headers: { 
                             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' 
                         }
                     });
-                    if (!ddgRes.ok) throw new Error(`Status ${ddgRes.status}`);
-                    const html = await ddgRes.text();
-                    
-                    const matches = [];
-                    const bodyRegex = /<div class="result__body">([\s\S]*?)<\/div>/gi;
-                    let match;
-                    while ((match = bodyRegex.exec(html)) !== null && matches.length < 3) {
-                        const body = match[1];
-                        const linkMatch = body.match(/<a class="result__url" href="([^"]+)"/i);
-                        const snippetMatch = body.match(/<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>/i) || body.match(/<div class="result__snippet">([\s\S]*?)<\/div>/i);
-                        
-                        const rawUrl = linkMatch ? linkMatch[1] : '';
-                        let cleanedUrl = rawUrl;
-                        if (rawUrl.includes('uddg=')) {
-                            const params = new URLSearchParams(rawUrl.split('?')[1]);
-                            cleanedUrl = params.get('uddg') || rawUrl;
+                    if (ddgRes.ok) {
+                        const html = await ddgRes.text();
+                        const results = [];
+                        const linkRegex = /<a class="result__url" href="([^"]+)"[^>]*>\s*([\s\S]*?)\s*<\/a>/gi;
+                        const snippetRegex = /<a class="result__snippet"[^>]*>([\s\S]*?)<\/a>|<div class="result__snippet"[^>]*>([\s\S]*?)<\/div>/gi;
+                        const titleRegex = /<a class="result__a"[^>]*>([\s\S]*?)<\/a>/gi;
+
+                        const links = [...html.matchAll(linkRegex)];
+                        const titles = [...html.matchAll(titleRegex)];
+                        const snippets = [...html.matchAll(snippetRegex)];
+
+                        for (let i = 0; i < Math.min(links.length, 4); i++) {
+                            let rawUrl = links[i][1];
+                            if (rawUrl.includes('uddg=')) {
+                                const match = rawUrl.match(/uddg=([^&]+)/);
+                                if (match) rawUrl = decodeURIComponent(match[1]);
+                            }
+                            const title = (titles[i] ? titles[i][1] : 'Result').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').trim();
+                            const snippet = (snippets[i] ? (snippets[i][1] || snippets[i][2]) : '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').trim();
+
+                            if (rawUrl && title) {
+                                results.push(`**${title}**\n${snippet}\n<${rawUrl}>`);
+                            }
                         }
-                        
-                        const title = body.match(/<a class="result__a" href="[^"]+">([\s\S]*?)<\/a>/i)?.[1]?.replace(/<[^>]+>/g, '').trim() || 'No Title';
-                        const description = snippetMatch?.[1]?.replace(/<[^>]+>/g, '').trim() || 'No Description';
-                        
-                        if (cleanedUrl) {
-                            matches.push(`**${title}**\n${description}\n<${cleanedUrl}>`);
+
+                        if (results.length > 0) {
+                            return `Here are the top search results for "${query}":\n\n` + results.join('\n\n');
                         }
-                    }
-                    
-                    if (matches.length > 0) {
-                        return `Here are the top results from DuckDuckGo for "${args.query}":\n\n${matches.join('\n\n')}`;
                     }
                 } catch (ddgErr) {
                     console.error("DuckDuckGo Fallback Search Error:", ddgErr);
                 }
                 
-                return `I couldn't find any results for that on Google or DuckDuckGo. 🧊`;
+                return `I couldn't find any live results for "${query}". 🧊`;
             }
             case 'search_reddit': {
                 const res = await fetch(`https://www.reddit.com/r/${args.subreddit}/hot.json?limit=3`).then(r => r.json()).catch(() => null);

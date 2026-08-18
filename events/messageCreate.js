@@ -427,7 +427,8 @@ module.exports = async function onMessageCreate(message) {
         const messages = [
           {
             role: "system",
-            content: `You are Oakawol Bot, a helpful Discord server assistant. Always use the tools provided — never refuse an action if a matching tool exists.${memoryPrompt}
+            content: `You are Oakawol Bot, a helpful Discord server assistant. Always use the tools provided — never refuse an action if a matching tool exists.
+IMPORTANT: You HAVE real-time web search capabilities via tools (search_google, fetch_webpage, search_reddit, get_weather, get_crypto_price). If the user asks for current events, news, recent updates, live info, or anything beyond your training data cutoff, NEVER claim you cannot fetch live news or claim your knowledge cutoff prevents you. ALWAYS call search_google or fetch_webpage to get live real-time information!${memoryPrompt}
 
 Available bot commands (use via cmd_ tools):
 - cmd_add_money / cmd_remove_money: Manage a user's server balance. Pass args as "<number> <userId>"
