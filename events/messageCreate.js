@@ -131,16 +131,13 @@ async function verifyLinkStatus(url) {
 
 // Provider configurations and failover model hierarchy
 const AI_MODELS = [
-  // Primary: Groq (ultra-fast, production ready)
-  { provider: "groq",       model: "llama-3.3-70b-versatile",          supportsTools: true  },
-  { provider: "groq",       model: "llama-3.1-8b-instant",             supportsTools: true  },
-  { provider: "groq",       model: "deepseek-r1-distill-llama-70b",    supportsTools: false },
-  { provider: "groq",       model: "mixtral-8x7b-32768",               supportsTools: true  },
-  // Fallbacks: Cerebras, OpenRouter, Pollinations
-  { provider: "cerebras",   model: "llama-3.3-70b",                   supportsTools: false },
-  { provider: "openrouter", model: "meta-llama/llama-3.3-70b-instruct", supportsTools: true  },
-  { provider: "openrouter", model: "anthropic/claude-3.5-sonnet",       supportsTools: true  },
-  { provider: "pollinations", model: "openai-fast",                      supportsTools: true  },
+  // Primary: Groq (active production models verified on API)
+  { provider: "groq",       model: "openai/gpt-oss-120b",              supportsTools: true  },
+  { provider: "groq",       model: "qwen/qwen3.6-27b",                 supportsTools: true  },
+  { provider: "groq",       model: "openai/gpt-oss-20b",               supportsTools: true  },
+  // Fallbacks: OpenRouter & Pollinations
+  { provider: "openrouter", model: "google/gemini-2.5-flash",          supportsTools: true  },
+  { provider: "pollinations", model: "openai-fast",                    supportsTools: true  },
 ];
 
 function getProviderConfig(provider) {
