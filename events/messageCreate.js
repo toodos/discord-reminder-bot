@@ -389,8 +389,29 @@ module.exports = async function onMessageCreate(message) {
         "\n---------------------------------";
     }
 
-    // Build tool list (built-in tools + selective bot commands to keep payload lightweight for Groq 8k TPM limit)
+    // Build tool list (built-in tools + cmd tools)
     const dynamicTools = [...aiToolDefinitions];
+    
+    // Explicitly add command tools so Groq tool validation passes
+    const cmdTools = ["add_money", "remove_money", "balance", "imagine", "remind"];
+    for (const cmdName of cmdTools) {
+      dynamicTools.push({
+        type: "function",
+        function: {
+          name: `cmd_${cmdName}`,
+          description: `Executes the built-in command '${cmdName}'.`,
+          parameters: {
+            type: "object",
+            properties: {
+              args: {
+                type: "string",
+                description: 'Arguments for the command (e.g. "50 <@user>" or description)',
+              },
+            },
+          },
+        },
+      });
+    }
 
     const availableModels = AI_MODELS.filter(
       ({ provider }) => !!getProviderConfig(provider).key,
@@ -422,6 +443,7 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
         const requestBody = {
           model: model,
           messages: messages,
+          max_tokens: 1000,
         };
 
         // Only pass tools to models that support them
@@ -671,7 +693,7 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
               const secondResponse = await fetch(rUrl, {
                 method: "POST",
                 headers: rHeaders,
-                body: JSON.stringify({ model: retryModel.model, messages: secondMessagesPayload }),
+                body: JSON.stringify({ model: retryModel.model, messages: secondMessagesPayload, max_tokens: 1000 }),
               });
 
               if (secondResponse.ok) {
