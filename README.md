@@ -7,7 +7,7 @@ A premium, all-in-one Discord bot designed with a **Clean & Cute Robotic** aesth
 ## ✨ Core Operational Features
 
 ### 🤖 Autonomous AI Chat Interface
-Communicate with the bot natively! Powered by Pollinations AI with a multi-model fallback strategy.
+Communicate with the bot natively! Powered by **Groq** ultra-fast LLMs (`llama-3.3-70b-versatile`, `llama-3.1-8b-instant`, `deepseek-r1-distill-llama-70b`) with multi-provider fallback strategy (Cerebras, OpenRouter, Pollinations).
 - **Smart Protocol Execution**: The bot can execute its own commands directly if you politely ask it (e.g., "Could you add 500 ₹ to @user?" or "Schedule a recharge in 10m").
 - **Mention to Uplink**: Simply ping the bot or DM it to spark up a seamless, contextual connection!
 - **Persistent Memory Bank**: The bot actively remembers details about users and the server context across conversations.
@@ -65,7 +65,7 @@ Create a `.env` file in the root directory:
 DISCORD_TOKEN=your_token_here
 CLIENT_ID=your_client_id_here
 GUILD_ID=your_server_id_here  # Optional: For instant command updates!
-POLLINATIONS_API_KEY=your_pollinations_api_key_here # Required for AI chat
+GROQ_API_KEY=gsk_your_groq_api_key_here # Required for Groq AI chat (https://console.groq.com)
 ```
 
 ### 3. Requirements

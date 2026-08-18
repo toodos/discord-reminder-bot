@@ -1,7 +1,7 @@
 /**
  * events/messageCreate.js
  * Handles link detection inside ticket channels and AI chat.
- * Primary engine: Pollinations  |  Fallback: None (multi-model)  |  Images: Pollinations
+ * Primary engine: Groq  |  Fallback: Multi-model (Cerebras, OpenRouter, Pollinations)
  */
 const { PermissionFlagsBits, EmbedBuilder } = require("discord.js");
 const db = require("../utils/database");
@@ -131,7 +131,12 @@ async function verifyLinkStatus(url) {
 
 // Provider configurations and failover model hierarchy
 const AI_MODELS = [
+  // Primary: Groq (ultra-fast, production ready)
   { provider: "groq",       model: "llama-3.3-70b-versatile",          supportsTools: true  },
+  { provider: "groq",       model: "llama-3.1-8b-instant",             supportsTools: true  },
+  { provider: "groq",       model: "deepseek-r1-distill-llama-70b",    supportsTools: false },
+  { provider: "groq",       model: "mixtral-8x7b-32768",               supportsTools: true  },
+  // Fallbacks: Cerebras, OpenRouter, Pollinations
   { provider: "cerebras",   model: "llama-3.3-70b",                   supportsTools: false },
   { provider: "openrouter", model: "meta-llama/llama-3.3-70b-instruct", supportsTools: true  },
   { provider: "openrouter", model: "anthropic/claude-3.5-sonnet",       supportsTools: true  },
@@ -322,11 +327,13 @@ module.exports = async function onMessageCreate(message) {
 
   if (!isChatRequest) return;
 
-  // ----- AI CHAT HANDLER (Pollinations only) -----
-  if (!process.env.POLLINATIONS_API_KEY) {
+  // ----- AI CHAT HANDLER -----
+  const availableAiKeys = ["GROQ_API_KEY", "OPENROUTER_API_KEY", "CEREBRAS_API_KEY", "POLLINATIONS_API_KEY"];
+  const hasAiKey = availableAiKeys.some(key => !!process.env[key]);
+  if (!hasAiKey) {
     return message
       .reply(
-        "I'm not configured with a Pollinations AI API key! Please set `POLLINATIONS_API_KEY` in the `.env` file.",
+        "I'm not configured with an AI API key! Please set `GROQ_API_KEY` (or another AI provider key) in your `.env` file.",
       )
       .catch(() => {});
   }
@@ -685,6 +692,7 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
               // Strip reasoning tags from second call too
               if (rawReply) {
                 rawReply = rawReply
+                  .replace(/<think>[\s\S]*?<\/think>/gi, "")
                   .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
                   .replace(/<reflection>[\s\S]*?<\/reflection>/gi, "")
                   .replace(/<output>([\s\S]*?)<\/output>/gi, "$1")
@@ -743,8 +751,9 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
       return;
     }
 
-    // Strip reasoning model thinking tags (nova-fast, qwen, deepseek etc. leak these)
+    // Strip reasoning model thinking tags (DeepSeek, Llama, Nova, etc.)
     reply = reply
+      .replace(/<think>[\s\S]*?<\/think>/gi, "")
       .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
       .replace(/<reflection>[\s\S]*?<\/reflection>/gi, "")
       .replace(/<output>([\s\S]*?)<\/output>/gi, "$1")

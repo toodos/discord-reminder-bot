@@ -6,7 +6,7 @@ require("dotenv").config();
 
 // ─── Environment Validation ───────────────────────────────────────────────────
 
-const REQUIRED_ENV = ["DISCORD_TOKEN", "CLIENT_ID", "POLLINATIONS_API_KEY"];
+const REQUIRED_ENV = ["DISCORD_TOKEN", "CLIENT_ID"];
 const OPTIONAL_ENV = ["GUILD_ID"];
 
 const missingEnv = REQUIRED_ENV.filter((key) => !process.env[key]);
@@ -18,6 +18,16 @@ if (missingEnv.length > 0) {
     "[Config] Please create a .env file with all required variables. See README for details.",
   );
   process.exit(1);
+}
+
+const aiKeys = ["GROQ_API_KEY", "OPENROUTER_API_KEY", "CEREBRAS_API_KEY", "POLLINATIONS_API_KEY"];
+const activeAiKey = aiKeys.find((key) => !!process.env[key]);
+if (activeAiKey) {
+  console.log(`[Config] ✅ AI Provider key detected: ${activeAiKey}`);
+} else {
+  console.warn(
+    "[Config] ⚠️ No AI provider API key set (GROQ_API_KEY, OPENROUTER_API_KEY, etc.). Set GROQ_API_KEY in .env to enable AI chat capabilities.",
+  );
 }
 
 for (const key of OPTIONAL_ENV) {
