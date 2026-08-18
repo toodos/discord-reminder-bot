@@ -904,25 +904,6 @@ async function executeTool(tName, args, message) {
                         console.warn("Google News RSS Search failed:", e.message);
                     }
                 }
-
-                // 2. Googlethis module fallback
-                let googleResults = null;
-                try {
-                    const google = require('googlethis');
-                    const options = { page: 0, safe: false, additional_params: { hl: 'en' } };
-                    const response = await google.search(query, options);
-                    if (response && response.results && response.results.length > 0) {
-                        googleResults = response.results.slice(0, 4).map(r => `**${r.title}**\n${r.description}\n<${r.url}>`).join('\n\n');
-                    } else if (response && response.top_stories && response.top_stories.length > 0) {
-                        googleResults = response.top_stories.slice(0, 4).map(r => `**${r.title}**\n<${r.url}>`).join('\n\n');
-                    }
-                } catch (e) {
-                    console.warn("Google Search failed, falling back to DuckDuckGo:", e.message);
-                }
-                
-                if (googleResults) {
-                    return `Here are the top web search results for "${query}":\n\n${googleResults}`;
-                }
                 
                 // 3. DuckDuckGo HTML Fallback
                 try {

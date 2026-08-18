@@ -389,30 +389,8 @@ module.exports = async function onMessageCreate(message) {
         "\n---------------------------------";
     }
 
-    // Build tool list (built-in tools + bot slash commands)
+    // Build tool list (built-in tools + selective bot commands to keep payload lightweight for Groq 8k TPM limit)
     const dynamicTools = [...aiToolDefinitions];
-
-    if (message.client.commands) {
-      for (const [cmdName, cmd] of message.client.commands.entries()) {
-        dynamicTools.push({
-          type: "function",
-          function: {
-            name: `cmd_${cmdName.replace(/[^a-zA-Z0-9_-]/g, "")}`,
-            description: `Executes the built-in bot command '${cmdName}'. Description: ${cmd.description || "No description"}`,
-            parameters: {
-              type: "object",
-              properties: {
-                args: {
-                  type: "string",
-                  description:
-                    'The FULL text arguments for the command (e.g., "75 <@123456789>" or "category name")',
-                },
-              },
-            },
-          },
-        });
-      }
-    }
 
     const availableModels = AI_MODELS.filter(
       ({ provider }) => !!getProviderConfig(provider).key,
@@ -437,7 +415,7 @@ User messages are prefixed with their username (e.g. Username: message) so you k
 Always extract the user's Discord ID from mentions like <@123456789> and include it in args.
 Reply concisely and friendly. Do not include any reasoning or thinking in your response.`,
           },
-          ...conversationHistory,
+          ...conversationHistory.slice(-4),
           { role: "user", content: `${message.author.username}: ${prompt}` },
         ];
 
@@ -470,14 +448,14 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
         if (!response.ok) {
           const errBody = await response.text();
           const is5xx = response.status >= 500 && response.status < 600;
-          const is429 = response.status === 429;
+          const isRateOrTokenLimit = response.status === 429 || response.status === 413;
           const providerTag = provider.charAt(0).toUpperCase() + provider.slice(1);
           const err = new Error(
             `${providerTag} API failed (${model}): ${response.status} ${errBody}`,
           );
-          if (is429) {
+          if (isRateOrTokenLimit) {
             console.warn(
-              `[${providerTag}] ⚠️  Model ${model} hit rate limit (429) — failing over to next model...`,
+              `[${providerTag}] ⚠️  Model ${model} hit token/rate limit (${response.status}) — failing over to next model...`,
             );
           } else if (is5xx) {
             console.warn(
@@ -670,6 +648,13 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
             ? "COMMAND_EXECUTED_SILENTLY"
             : null;
 
+          // Compact messages payload for 2nd API call to consume minimal tokens (<500 tokens)
+          const secondMessagesPayload = [
+            { role: "system", content: "Summarize the tool output into a friendly, concise response for the user. Do not mention system tools or internal formatting." },
+            { role: "user", content: prompt },
+            { role: "assistant", content: `Tool Output: ${secondReply || "Action completed successfully."}` }
+          ];
+
           // Attempt second API call to get final text response after tool execution with failover
           for (const retryModel of availableModels) {
             const { url: rUrl, key: rKey } = getProviderConfig(retryModel.provider);
@@ -686,7 +671,7 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
               const secondResponse = await fetch(rUrl, {
                 method: "POST",
                 headers: rHeaders,
-                body: JSON.stringify({ model: retryModel.model, messages: messages }),
+                body: JSON.stringify({ model: retryModel.model, messages: secondMessagesPayload }),
               });
 
               if (secondResponse.ok) {
@@ -726,8 +711,8 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
       } catch (err) {
         const providerTag = provider.charAt(0).toUpperCase() + provider.slice(1);
         const knownApiErr = err.message.includes("Pollinations API failed");
-        const isRateLimit = err.message.includes("429");
-        if (!knownApiErr && !isRateLimit) {
+        const isRateOrTokenLimit = err.message.includes("429") || err.message.includes("413");
+        if (!knownApiErr && !isRateOrTokenLimit) {
           console.error(
             `[${providerTag}] ❌ Unexpected error with model ${model}:`,
             err.message,
@@ -738,7 +723,7 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
           err.message.includes("502") ||
           err.message.includes("503") ||
           err.message.includes("504");
-        await new Promise((r) => setTimeout(r, (isGatewayErr || isRateLimit) ? 1000 : 400));
+        await new Promise((r) => setTimeout(r, (isGatewayErr || isRateOrTokenLimit) ? 1000 : 400));
       }
     }
 
