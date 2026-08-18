@@ -131,10 +131,10 @@ async function verifyLinkStatus(url) {
 
 // Provider configurations and failover model hierarchy
 const AI_MODELS = [
-  // Primary: Groq (active production models verified on API)
-  { provider: "groq",       model: "openai/gpt-oss-120b",              supportsTools: true  },
+  // Primary: Groq (ultra-fast, active production models with high TPM limits)
   { provider: "groq",       model: "qwen/qwen3.6-27b",                 supportsTools: true  },
   { provider: "groq",       model: "openai/gpt-oss-20b",               supportsTools: true  },
+  { provider: "groq",       model: "openai/gpt-oss-120b",              supportsTools: true  },
   // Fallbacks: OpenRouter & Pollinations
   { provider: "openrouter", model: "google/gemini-2.5-flash",          supportsTools: true  },
   { provider: "pollinations", model: "openai-fast",                    supportsTools: true  },
@@ -470,16 +470,21 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
         if (!response.ok) {
           const errBody = await response.text();
           const is5xx = response.status >= 500 && response.status < 600;
+          const is429 = response.status === 429;
           const providerTag = provider.charAt(0).toUpperCase() + provider.slice(1);
           const err = new Error(
             `${providerTag} API failed (${model}): ${response.status} ${errBody}`,
           );
-          if (is5xx) {
+          if (is429) {
+            console.warn(
+              `[${providerTag}] ⚠️  Model ${model} hit rate limit (429) — failing over to next model...`,
+            );
+          } else if (is5xx) {
             console.warn(
               `[${providerTag}] ⚠️  Model ${model} returned ${response.status} (gateway issue) — trying next model...`,
             );
           } else {
-            console.error(
+            console.warn(
               `[${providerTag}] ❌ Model ${model} returned ${response.status} — trying next model...`,
             );
           }
@@ -665,49 +670,49 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
             ? "COMMAND_EXECUTED_SILENTLY"
             : null;
 
-          try {
-            const secondHeaders = {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${apiKey}`,
-            };
-            if (provider === "openrouter") {
-              secondHeaders["HTTP-Referer"] = "https://github.com/toodos/discord-reminder-bot";
-              secondHeaders["X-Title"] = "Oakawol Bot";
-            }
-
-            // Second API call to get final text response after tool execution
-            const secondResponse = await fetch(apiUrl, {
-              method: "POST",
-              headers: secondHeaders,
-              body: JSON.stringify({ model: model, messages: messages }),
-            });
-
-            const providerTag = provider.charAt(0).toUpperCase() + provider.slice(1);
-            if (secondResponse.ok) {
-              const secondCompletion = await secondResponse.json();
-              let rawReply =
-                secondCompletion.choices[0]?.message?.content || secondReply;
-              // Strip reasoning tags from second call too
-              if (rawReply) {
-                rawReply = rawReply
-                  .replace(/<think>[\s\S]*?<\/think>/gi, "")
-                  .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
-                  .replace(/<reflection>[\s\S]*?<\/reflection>/gi, "")
-                  .replace(/<output>([\s\S]*?)<\/output>/gi, "$1")
-                  .trim();
+          // Attempt second API call to get final text response after tool execution with failover
+          for (const retryModel of availableModels) {
+            const { url: rUrl, key: rKey } = getProviderConfig(retryModel.provider);
+            try {
+              const rHeaders = {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${rKey}`,
+              };
+              if (retryModel.provider === "openrouter") {
+                rHeaders["HTTP-Referer"] = "https://github.com/toodos/discord-reminder-bot";
+                rHeaders["X-Title"] = "Oakawol Bot";
               }
-              secondReply = rawReply || secondReply;
-            } else {
-              console.warn(
-                `[${providerTag}] Second call failed (${model}): ${secondResponse.status} — tools already ran, using fallback reply`,
-              );
+
+              const secondResponse = await fetch(rUrl, {
+                method: "POST",
+                headers: rHeaders,
+                body: JSON.stringify({ model: retryModel.model, messages: messages }),
+              });
+
+              if (secondResponse.ok) {
+                const secondCompletion = await secondResponse.json();
+                let rawReply = secondCompletion.choices[0]?.message?.content;
+                if (rawReply) {
+                  rawReply = rawReply
+                    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+                    .replace(/<thinking>[\s\S]*?<\/thinking>/gi, "")
+                    .replace(/<reflection>[\s\S]*?<\/reflection>/gi, "")
+                    .replace(/<output>([\s\S]*?)<\/output>/gi, "$1")
+                    .trim();
+                }
+                if (rawReply) {
+                  secondReply = rawReply;
+                  break;
+                }
+              } else {
+                const rTag = retryModel.provider.charAt(0).toUpperCase() + retryModel.provider.slice(1);
+                console.warn(
+                  `[${rTag}] Second call model ${retryModel.model} returned ${secondResponse.status} — trying next fallback model...`,
+                );
+              }
+            } catch (rErr) {
+              // try next model
             }
-          } catch (secondErr) {
-            const providerTag = provider.charAt(0).toUpperCase() + provider.slice(1);
-            console.warn(
-              `[${providerTag}] Second call error (${model}):`,
-              secondErr.message,
-            );
           }
 
           // Set reply and ALWAYS break — tools already ran, do not retry with another model
@@ -721,18 +726,19 @@ Reply concisely and friendly. Do not include any reasoning or thinking in your r
       } catch (err) {
         const providerTag = provider.charAt(0).toUpperCase() + provider.slice(1);
         const knownApiErr = err.message.includes("Pollinations API failed");
-        if (!knownApiErr) {
+        const isRateLimit = err.message.includes("429");
+        if (!knownApiErr && !isRateLimit) {
           console.error(
             `[${providerTag}] ❌ Unexpected error with model ${model}:`,
             err.message,
           );
         }
-        // Back off slightly longer for gateway errors to give upstream time to recover
+        // Back off slightly longer for rate limits or gateway errors
         const isGatewayErr =
           err.message.includes("502") ||
           err.message.includes("503") ||
           err.message.includes("504");
-        await new Promise((r) => setTimeout(r, isGatewayErr ? 1000 : 400));
+        await new Promise((r) => setTimeout(r, (isGatewayErr || isRateLimit) ? 1000 : 400));
       }
     }
 
