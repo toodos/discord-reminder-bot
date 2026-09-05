@@ -1,367 +1,417 @@
 /**
  * utils/database.js
- * Unified SQLite database. No more JSON file reads/writes on every operation.
+ * ⚡ Pure JavaScript high-performance JSON database engine.
+ * Zero native C++ dependencies (no node-gyp, no compilation errors on Docker / Bot-Hosting).
+ * In-memory sub-millisecond access with atomic asynchronous/synchronous file persistence.
  */
-const Database = require('better-sqlite3');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
 const dataDir = path.join(__dirname, '../data');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+}
 
-const db = new Database(path.join(dataDir, 'blossom.db'));
+const DB_PATH = path.join(dataDir, 'database.json');
+const TMP_PATH = path.join(dataDir, 'database.json.tmp');
 
-// Enable WAL mode for better concurrent performance and crash safety
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+// Default database structure
+const defaultSchema = {
+    users: {},
+    transactions: [],
+    cooldowns: {},
+    reminders: {},
+    guilds: {},
+    categories: {},
+    tickets: {},
+    blacklist: {},
+    memory: {},
+    brain_memories: [],
+    upi: {},
+};
 
-db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-        userId      TEXT PRIMARY KEY,
-        balance     REAL NOT NULL DEFAULT 0
-    );
+// In-memory data store
+let db = { ...defaultSchema };
 
-    CREATE TABLE IF NOT EXISTS cooldowns (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        userId      TEXT NOT NULL UNIQUE,
-        channelId   TEXT NOT NULL,
-        endTime     INTEGER NOT NULL,
-        initiatorId TEXT
-    );
+function loadDatabase() {
+    try {
+        if (fs.existsSync(DB_PATH)) {
+            const raw = fs.readFileSync(DB_PATH, 'utf8');
+            const parsed = JSON.parse(raw);
+            db = {
+                users: parsed.users || {},
+                transactions: parsed.transactions || [],
+                cooldowns: parsed.cooldowns || {},
+                reminders: parsed.reminders || {},
+                guilds: parsed.guilds || {},
+                categories: parsed.categories || {},
+                tickets: parsed.tickets || {},
+                blacklist: parsed.blacklist || {},
+                memory: parsed.memory || {},
+                brain_memories: parsed.brain_memories || [],
+                upi: parsed.upi || {},
+            };
+        } else {
+            saveSync();
+        }
+    } catch (err) {
+        console.error('[Database] Failed to parse database.json, initializing defaults:', err.message);
+        db = { ...defaultSchema };
+    }
+}
 
-    CREATE TABLE IF NOT EXISTS reminders (
-        id          TEXT PRIMARY KEY,
-        userId      TEXT NOT NULL,
-        channelId   TEXT NOT NULL,
-        message     TEXT NOT NULL,
-        endTime     INTEGER NOT NULL,
-        initiatorId TEXT NOT NULL
-    );
+// Atomic file save to prevent corruption
+let saveTimeout = null;
+function saveSync() {
+    try {
+        const json = JSON.stringify(db, null, 2);
+        fs.writeFileSync(TMP_PATH, json, 'utf8');
+        fs.renameSync(TMP_PATH, DB_PATH);
+    } catch (err) {
+        console.error('[Database] Sync save error:', err.message);
+    }
+}
 
-    CREATE TABLE IF NOT EXISTS guilds (
-        guildId             TEXT PRIMARY KEY,
-        adminRoleId         TEXT,
-        logChannelId        TEXT,
-        transcriptChannelId TEXT,
-        ticketCount         INTEGER NOT NULL DEFAULT 0
-    );
+function scheduleSave() {
+    if (saveTimeout) return;
+    saveTimeout = setTimeout(() => {
+        saveTimeout = null;
+        saveSync();
+    }, 100);
+}
 
-    CREATE TABLE IF NOT EXISTS categories (
-        id          TEXT PRIMARY KEY,
-        guildId     TEXT NOT NULL,
-        name        TEXT NOT NULL,
-        emoji       TEXT NOT NULL,
-        roles       TEXT NOT NULL DEFAULT '[]',
-        categoryId  TEXT NOT NULL,
-        maxTickets  INTEGER NOT NULL DEFAULT 1,
-        questions   TEXT NOT NULL DEFAULT '[]'
-    );
+// Ensure database is saved before process exits
+process.on('exit', () => saveSync());
+process.on('SIGINT', () => { saveSync(); process.exit(0); });
+process.on('SIGTERM', () => { saveSync(); process.exit(0); });
 
-    CREATE TABLE IF NOT EXISTS tickets (
-        channelId   TEXT PRIMARY KEY,
-        guildId     TEXT NOT NULL,
-        userId      TEXT NOT NULL,
-        categoryId  TEXT NOT NULL,
-        status      TEXT NOT NULL DEFAULT 'open',
-        claimantId  TEXT,
-        createdAt   INTEGER NOT NULL,
-        closedAt    INTEGER,
-        answers     TEXT NOT NULL DEFAULT '{}'
-    );
-
-    CREATE TABLE IF NOT EXISTS blacklist (
-        guildId TEXT NOT NULL,
-        userId  TEXT NOT NULL,
-        PRIMARY KEY (guildId, userId)
-    );
-
-    CREATE TABLE IF NOT EXISTS memory (
-        slot    INTEGER PRIMARY KEY,
-        message TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS brain_memories (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        scope       TEXT NOT NULL,
-        scopeId     TEXT,
-        content     TEXT NOT NULL,
-        timestamp   INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS transactions (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        userId      TEXT NOT NULL,
-        type        TEXT NOT NULL,
-        amount      REAL NOT NULL,
-        oldBalance  REAL NOT NULL,
-        newBalance  REAL NOT NULL,
-        reason      TEXT,
-        executorId  TEXT,
-        timestamp   INTEGER NOT NULL
-    );
-`);
+// Initialize database
+loadDatabase();
 
 // ─── Economy ──────────────────────────────────────────────────────────────────
 
-const stmts = {
-    getUser:        db.prepare('SELECT * FROM users WHERE userId = ?'),
-    upsertUser:     db.prepare('INSERT INTO users (userId, balance) VALUES (?, 0) ON CONFLICT(userId) DO NOTHING'),
-    addMoney:       db.prepare('UPDATE users SET balance = balance + ? WHERE userId = ?'),
-    removeMoney:    db.prepare('UPDATE users SET balance = balance - ? WHERE userId = ?'),
-    getAllUsers:     db.prepare('SELECT * FROM users ORDER BY balance DESC'),
-
-    // Transactions
-    addTransaction: db.prepare(`
-        INSERT INTO transactions (userId, type, amount, oldBalance, newBalance, reason, executorId, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `),
-    getTransactions: db.prepare(`
-        SELECT * FROM transactions WHERE userId = ? ORDER BY timestamp DESC LIMIT ?
-    `),
-
-    // Cooldowns
-    getCooldown:    db.prepare('SELECT * FROM cooldowns WHERE userId = ?'),
-    getAllCooldowns: db.prepare('SELECT * FROM cooldowns'),
-    setCooldown:    db.prepare('INSERT INTO cooldowns (userId, channelId, endTime, initiatorId) VALUES (?, ?, ?, ?) ON CONFLICT(userId) DO UPDATE SET channelId=excluded.channelId, endTime=excluded.endTime, initiatorId=excluded.initiatorId'),
-    clearCooldown:  db.prepare('DELETE FROM cooldowns WHERE userId = ? AND endTime = ?'),
-    removeCooldownByUserId: db.prepare('DELETE FROM cooldowns WHERE userId = ?'),
-
-    // Reminders
-    addReminder:    db.prepare('INSERT INTO reminders (id, userId, channelId, message, endTime, initiatorId) VALUES (?, ?, ?, ?, ?, ?)'),
-    getAllReminders: db.prepare('SELECT * FROM reminders'),
-    getReminderById: db.prepare('SELECT * FROM reminders WHERE id = ?'),
-    removeReminder: db.prepare('DELETE FROM reminders WHERE id = ?'),
-    removeRemindersByUserId: db.prepare('DELETE FROM reminders WHERE userId = ?'),
-
-    // Memory
-    setMemory:      db.prepare('INSERT INTO memory (slot, message) VALUES (?, ?) ON CONFLICT(slot) DO UPDATE SET message=excluded.message'),
-    getMemory:      db.prepare('SELECT message FROM memory WHERE slot = ?'),
-    getAllMemory:    db.prepare('SELECT * FROM memory'),
-
-    // Brain memories
-    addBrainMemory: db.prepare('INSERT INTO brain_memories (scope, scopeId, content, timestamp) VALUES (?, ?, ?, ?)'),
-    getAllRelevantBrainMemories: db.prepare(`
-        SELECT * FROM brain_memories 
-        WHERE (scope = 'global')
-           OR (scope = 'user' AND scopeId = ?)
-           OR (scope = 'server' AND scopeId = ?)
-        ORDER BY timestamp ASC
-    `),
-
-    // UPI
-    setUpi:         db.prepare('INSERT INTO upi_info (userId, guildId, upiId, qrUrl, savedAt) VALUES (?, ?, ?, ?, ?) ON CONFLICT(userId, guildId) DO UPDATE SET upiId=excluded.upiId, qrUrl=excluded.qrUrl, savedAt=excluded.savedAt'),
-    getUpi:         db.prepare('SELECT * FROM upi_info WHERE userId = ? AND guildId = ?'),
-    deleteUpi:      db.prepare('DELETE FROM upi_info WHERE userId = ? AND guildId = ?'),
-    getAllUpi:       db.prepare('SELECT * FROM upi_info WHERE guildId = ?'),
-};
-
 function ensureUser(userId) {
-    stmts.upsertUser.run(userId);
+    if (!db.users[userId]) {
+        db.users[userId] = { userId, balance: 0 };
+        scheduleSave();
+    }
 }
 
 function getUser(userId) {
     ensureUser(userId);
-    return stmts.getUser.get(userId);
+    return db.users[userId];
 }
 
 function addMoney(userId, amount, reason = null, executorId = null) {
     ensureUser(userId);
-    const oldBalance = stmts.getUser.get(userId).balance;
+    const oldBalance = db.users[userId].balance;
     const newBalance = oldBalance + amount;
-    stmts.addMoney.run(amount, userId);
-    stmts.addTransaction.run(userId, 'ADD', amount, oldBalance, newBalance, reason, executorId, Date.now());
+    db.users[userId].balance = newBalance;
+
+    db.transactions.push({
+        id: db.transactions.length + 1,
+        userId,
+        type: 'ADD',
+        amount,
+        oldBalance,
+        newBalance,
+        reason,
+        executorId,
+        timestamp: Date.now(),
+    });
+
+    scheduleSave();
     return newBalance;
 }
 
 function removeMoney(userId, amount, reason = null, executorId = null) {
     ensureUser(userId);
-    const oldBalance = stmts.getUser.get(userId).balance;
+    const oldBalance = db.users[userId].balance;
     const newBalance = oldBalance - amount;
-    stmts.removeMoney.run(amount, userId);
-    stmts.addTransaction.run(userId, 'REMOVE', amount, oldBalance, newBalance, reason, executorId, Date.now());
+    db.users[userId].balance = newBalance;
+
+    db.transactions.push({
+        id: db.transactions.length + 1,
+        userId,
+        type: 'REMOVE',
+        amount,
+        oldBalance,
+        newBalance,
+        reason,
+        executorId,
+        timestamp: Date.now(),
+    });
+
+    scheduleSave();
     return newBalance;
 }
 
 function getTransactions(userId, limit = 5) {
-    return stmts.getTransactions.all(userId, limit);
+    return db.transactions
+        .filter((t) => t.userId === userId)
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, limit);
 }
 
 function getAllUsers() {
-    return stmts.getAllUsers.all();
+    return Object.values(db.users).sort((a, b) => (b.balance || 0) - (a.balance || 0));
 }
 
 // ─── Cooldowns ────────────────────────────────────────────────────────────────
 
 function getCooldown(userId) {
-    return stmts.getCooldown.get(userId) || null;
+    return db.cooldowns[userId] || null;
 }
 
 function getCooldowns() {
-    return stmts.getAllCooldowns.all();
+    return Object.values(db.cooldowns);
 }
 
 function setCooldown(userId, channelId, endTime, initiatorId) {
-    stmts.setCooldown.run(userId, channelId, endTime, initiatorId);
+    db.cooldowns[userId] = {
+        id: Date.now(),
+        userId,
+        channelId,
+        endTime,
+        initiatorId,
+    };
+    scheduleSave();
 }
 
 function clearCooldown(userId, endTime) {
-    stmts.clearCooldown.run(userId, endTime);
+    const cd = db.cooldowns[userId];
+    if (cd && (!endTime || cd.endTime === endTime)) {
+        delete db.cooldowns[userId];
+        scheduleSave();
+    }
 }
 
 function removeCooldownByUserId(userId) {
-    stmts.removeCooldownByUserId.run(userId);
+    if (db.cooldowns[userId]) {
+        delete db.cooldowns[userId];
+        scheduleSave();
+    }
 }
 
 // ─── Reminders ────────────────────────────────────────────────────────────────
 
 function addReminder(userId, channelId, message, endTime, initiatorId) {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-    stmts.addReminder.run(id, userId, channelId, message, endTime, initiatorId);
+    db.reminders[id] = {
+        id,
+        userId,
+        channelId,
+        message,
+        endTime,
+        initiatorId,
+    };
+    scheduleSave();
     return id;
 }
 
 function getReminders() {
-    return stmts.getAllReminders.all();
+    return Object.values(db.reminders);
 }
 
 function reminderExists(id) {
-    return !!stmts.getReminderById.get(id);
+    return Boolean(db.reminders[id]);
 }
 
 function removeReminder(id) {
-    stmts.removeReminder.run(id);
+    if (db.reminders[id]) {
+        delete db.reminders[id];
+        scheduleSave();
+    }
 }
 
 function removeRemindersByUserId(userId) {
-    stmts.removeRemindersByUserId.run(userId);
+    let changed = false;
+    for (const [id, r] of Object.entries(db.reminders)) {
+        if (r.userId === userId) {
+            delete db.reminders[id];
+            changed = true;
+        }
+    }
+    if (changed) scheduleSave();
 }
 
 // ─── Guild / Tickets ──────────────────────────────────────────────────────────
 
 function getGuildConfig(guildId) {
-    return db.prepare('SELECT * FROM guilds WHERE guildId = ?').get(guildId) || {};
+    return db.guilds[guildId] || {};
 }
 
 function setGuildConfig(guildId, data) {
-    const existing = db.prepare('SELECT guildId FROM guilds WHERE guildId = ?').get(guildId);
-    if (existing) {
-        const keys = Object.keys(data);
-        const clause = keys.map(k => `${k} = ?`).join(', ');
-        db.prepare(`UPDATE guilds SET ${clause} WHERE guildId = ?`).run(...Object.values(data), guildId);
-    } else {
-        db.prepare('INSERT INTO guilds (guildId, adminRoleId, logChannelId, transcriptChannelId) VALUES (?, ?, ?, ?)')
-            .run(guildId, data.adminRoleId, data.logChannelId, data.transcriptChannelId);
+    if (!db.guilds[guildId]) {
+        db.guilds[guildId] = { guildId, ticketCount: 0 };
     }
+    db.guilds[guildId] = { ...db.guilds[guildId], ...data, guildId };
+    scheduleSave();
 }
 
 function incrementTicketCount(guildId) {
-    db.prepare('INSERT INTO guilds (guildId) VALUES (?) ON CONFLICT(guildId) DO NOTHING').run(guildId);
-    db.prepare('UPDATE guilds SET ticketCount = ticketCount + 1 WHERE guildId = ?').run(guildId);
-    return db.prepare('SELECT ticketCount FROM guilds WHERE guildId = ?').get(guildId).ticketCount;
+    if (!db.guilds[guildId]) {
+        db.guilds[guildId] = { guildId, ticketCount: 0 };
+    }
+    db.guilds[guildId].ticketCount = (db.guilds[guildId].ticketCount || 0) + 1;
+    scheduleSave();
+    return db.guilds[guildId].ticketCount;
 }
 
 function getCategories(guildId) {
-    return db.prepare('SELECT * FROM categories WHERE guildId = ?').all(guildId);
+    return Object.values(db.categories).filter((c) => c.guildId === guildId);
 }
 
 function getCategory(id) {
-    return db.prepare('SELECT * FROM categories WHERE id = ?').get(id);
+    return db.categories[id] || null;
 }
 
 function createCategory(data) {
-    db.prepare('INSERT INTO categories (id, guildId, name, emoji, roles, categoryId, maxTickets, questions) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-        .run(data.id, data.guildId, data.name, data.emoji, JSON.stringify(data.roles), data.categoryId, data.maxTickets, JSON.stringify(data.questions));
+    db.categories[data.id] = {
+        id: data.id,
+        guildId: data.guildId,
+        name: data.name,
+        emoji: data.emoji,
+        roles: typeof data.roles === 'string' ? data.roles : JSON.stringify(data.roles || []),
+        categoryId: data.categoryId,
+        maxTickets: data.maxTickets || 1,
+        questions: typeof data.questions === 'string' ? data.questions : JSON.stringify(data.questions || []),
+    };
+    scheduleSave();
 }
 
 function deleteCategory(id) {
-    db.prepare('DELETE FROM categories WHERE id = ?').run(id);
+    if (db.categories[id]) {
+        delete db.categories[id];
+        scheduleSave();
+    }
 }
 
 function createTicket(data) {
-    db.prepare('INSERT INTO tickets (channelId, guildId, userId, categoryId, createdAt, answers) VALUES (?, ?, ?, ?, ?, ?)')
-        .run(data.channelId, data.guildId, data.userId, data.categoryId, data.createdAt, JSON.stringify(data.answers));
+    db.tickets[data.channelId] = {
+        channelId: data.channelId,
+        guildId: data.guildId,
+        userId: data.userId,
+        categoryId: data.categoryId,
+        status: 'open',
+        claimantId: null,
+        createdAt: data.createdAt || Date.now(),
+        closedAt: null,
+        answers: typeof data.answers === 'string' ? data.answers : JSON.stringify(data.answers || {}),
+    };
+    scheduleSave();
 }
 
 function getTicket(channelId) {
-    return db.prepare('SELECT * FROM tickets WHERE channelId = ?').get(channelId);
+    return db.tickets[channelId] || null;
 }
 
 function updateTicket(channelId, data) {
-    const keys = Object.keys(data);
-    const clause = keys.map(k => `${k} = ?`).join(', ');
-    db.prepare(`UPDATE tickets SET ${clause} WHERE channelId = ?`).run(...Object.values(data), channelId);
+    if (db.tickets[channelId]) {
+        db.tickets[channelId] = { ...db.tickets[channelId], ...data };
+        scheduleSave();
+    }
 }
 
 function getUserActiveTickets(userId, guildId) {
-    return db.prepare("SELECT * FROM tickets WHERE userId = ? AND guildId = ? AND status = 'open'").all(userId, guildId);
+    return Object.values(db.tickets).filter(
+        (t) => t.userId === userId && t.guildId === guildId && t.status === 'open'
+    );
 }
 
 function getUserTickets(userId, guildId) {
-    return db.prepare('SELECT * FROM tickets WHERE userId = ? AND guildId = ? ORDER BY createdAt DESC').all(userId, guildId);
+    return Object.values(db.tickets)
+        .filter((t) => t.userId === userId && t.guildId === guildId)
+        .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 function isBlacklisted(guildId, userId) {
-    return !!db.prepare('SELECT 1 FROM blacklist WHERE guildId = ? AND userId = ?').get(guildId, userId);
+    return Boolean(db.blacklist[`${guildId}_${userId}`]);
 }
 
 // ─── Memory ───────────────────────────────────────────────────────────────────
 
 function setMemory(slot, message) {
-    stmts.setMemory.run(slot, message);
+    db.memory[slot] = message;
+    scheduleSave();
 }
 
 function getMemory(slot) {
-    const row = stmts.getMemory.get(slot);
-    return row ? row.message : null;
+    return db.memory[slot] || null;
 }
 
 function getAllMemory() {
-    const rows = stmts.getAllMemory.all();
-    return Object.fromEntries(rows.map(r => [r.slot, r.message]));
+    return { ...db.memory };
 }
 
 // ─── Brain Memories ────────────────────────────────────────────────────────────
 
 function addBrainMemory(scope, scopeId, content) {
-    stmts.addBrainMemory.run(scope, scopeId || null, content, Date.now());
+    db.brain_memories.push({
+        id: db.brain_memories.length + 1,
+        scope,
+        scopeId: scopeId || null,
+        content,
+        timestamp: Date.now(),
+    });
+    scheduleSave();
 }
 
 function deleteBrainMemoryByKeyword(scope, scopeId, keyword) {
-    const likePattern = `%${keyword}%`;
-    if (scope === 'global') {
-        return db.prepare("DELETE FROM brain_memories WHERE scope = 'global' AND content LIKE ?").run(likePattern);
-    } else {
-        return db.prepare("DELETE FROM brain_memories WHERE scope = ? AND scopeId = ? AND content LIKE ?").run(scope, scopeId, likePattern);
-    }
+    const prevLen = db.brain_memories.length;
+    const kw = keyword.toLowerCase();
+    db.brain_memories = db.brain_memories.filter((m) => {
+        if (m.scope !== scope) return true;
+        if (scope !== 'global' && m.scopeId !== scopeId) return true;
+        return !m.content.toLowerCase().includes(kw);
+    });
+    if (db.brain_memories.length !== prevLen) scheduleSave();
 }
 
 function getBrainMemories(scope, scopeId) {
     if (scope === 'global') {
-        return db.prepare("SELECT * FROM brain_memories WHERE scope = 'global'").all();
+        return db.brain_memories.filter((m) => m.scope === 'global');
     }
-    return db.prepare("SELECT * FROM brain_memories WHERE scope = ? AND scopeId = ?").all(scope, scopeId);
+    return db.brain_memories.filter((m) => m.scope === scope && m.scopeId === scopeId);
 }
 
 function getAllRelevantBrainMemories(userId, guildId) {
-    return stmts.getAllRelevantBrainMemories.all(userId || null, guildId || null);
+    return db.brain_memories
+        .filter((m) => {
+            if (m.scope === 'global') return true;
+            if (m.scope === 'user' && m.scopeId === userId) return true;
+            if (m.scope === 'server' && m.scopeId === guildId) return true;
+            return false;
+        })
+        .sort((a, b) => a.timestamp - b.timestamp);
 }
 
 // ─── UPI ─────────────────────────────────────────────────────────────────────
 
 function setUpi(userId, guildId, upiId, qrUrl) {
-    stmts.setUpi.run(userId, guildId, upiId, qrUrl || null, Date.now());
+    db.upi[`${userId}_${guildId}`] = {
+        userId,
+        guildId,
+        upiId,
+        qrUrl: qrUrl || null,
+        savedAt: Date.now(),
+    };
+    scheduleSave();
 }
 
 function getUpi(userId, guildId) {
-    return stmts.getUpi.get(userId, guildId) || null;
+    return db.upi[`${userId}_${guildId}`] || null;
 }
 
 function deleteUpi(userId, guildId) {
-    stmts.deleteUpi.run(userId, guildId);
+    if (db.upi[`${userId}_${guildId}`]) {
+        delete db.upi[`${userId}_${guildId}`];
+        scheduleSave();
+    }
 }
 
 function getAllUpi(guildId) {
-    return stmts.getAllUpi.all(guildId);
+    return Object.values(db.upi).filter((u) => u.guildId === guildId);
 }
 
 module.exports = {

@@ -6,7 +6,7 @@ This guide explains how to integrate and configure the new modular ticket system
 Run the following command in your terminal to install the new required packages:
 
 ```bash
-npm install better-sqlite3 discord-html-transcripts
+npm install discord-html-transcripts
 ```
 
 ## 🔌 2. Integration
