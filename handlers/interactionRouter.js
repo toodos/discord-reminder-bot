@@ -7,6 +7,19 @@ const db = require('../utils/database');
 const ticketLogic = require('../utils/ticketLogic');
 const { verifyMessage, REDDIT_REGEX, LOADING_EMOJI, CHECK_EMOJI } = require('../commands/admin/verify');
 
+function safeArray(val) {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+        try {
+            const parsed = JSON.parse(val);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+}
+
 async function handleButton(interaction) {
     const { customId } = interaction;
 
@@ -21,20 +34,20 @@ async function handleButton(interaction) {
         }
 
         const config = db.getGuildConfig(interaction.guildId);
-        const staffRoles = JSON.parse(category.roles || '[]');
+        const staffRoles = safeArray(category.roles);
         const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator) ||
             (config.adminRoleId && interaction.member.roles.cache.has(config.adminRoleId));
         const isSupport = staffRoles.some(r => interaction.member.roles.cache.has(r));
 
         const active = db.getUserActiveTickets(interaction.user.id, interaction.guildId);
-        if (active.length >= category.maxTickets && !isAdmin && !isSupport) {
+        if (active.length >= (category.maxTickets || 1) && !isAdmin && !isSupport) {
             return interaction.reply({
                 content: `You already have ${active.length} open ticket(s) in this category. Please wait for it to be resolved.`,
                 ephemeral: true,
             });
         }
 
-        const questions = JSON.parse(category.questions || '[]');
+        const questions = safeArray(category.questions);
         if (questions.length > 0) {
             const modal = new ModalBuilder()
                 .setCustomId(`ticket_modal_${categoryId}`)
@@ -67,7 +80,7 @@ async function handleButton(interaction) {
         case 'ticket_close_confirm':
             return ticketLogic.closeTicket(interaction);
         case 'ticket_close_cancel':
-            return interaction.update({ content: 'Close cancelled. 🌸', components: [] });
+            return interaction.update({ content: 'Close cancelled. ◈', components: [] });
         case 'ticket_manage_users':
             return ticketLogic.manageUsers(interaction);
     }
@@ -81,7 +94,7 @@ async function handleModal(interaction) {
         const category = db.getCategory(categoryId);
         if (!category) return interaction.reply({ content: 'Category not found.', ephemeral: true });
 
-        const questions = JSON.parse(category.questions || '[]');
+        const questions = safeArray(category.questions);
         const answers = Object.fromEntries(
             questions.map((q, i) => [q.label, interaction.fields.getTextInputValue(`question_${i}`)])
         );
@@ -99,12 +112,12 @@ async function handleSelectMenu(interaction) {
 async function handleContextMenu(interaction) {
     if (interaction.commandName === 'Verify Link') {
         if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-            return interaction.reply({ content: 'Only Administrators can verify links! 🎀', ephemeral: true });
+            return interaction.reply({ content: 'Only Administrators can verify links! 🗝️', ephemeral: true });
         }
 
         const message = interaction.targetMessage;
         if (!REDDIT_REGEX.test(message.content)) {
-            return interaction.reply({ content: "I couldn't find a Reddit link in that message! 🍭", ephemeral: true });
+            return interaction.reply({ content: "I couldn't find a Reddit link in that message! ◈", ephemeral: true });
         }
 
         return verifyMessage(interaction, message);

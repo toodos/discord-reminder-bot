@@ -18,7 +18,7 @@ module.exports = {
         const reason     = interaction.options.getString('reason') || 'Added by Administrator';
 
         if (!targetUser || !amount) {
-            return interaction.reply({ embeds: [errorEmbed('Please specify both a valid user and an amount! 🌸')], ephemeral: true });
+            return interaction.reply({ embeds: [errorEmbed('Please specify both a valid member and an amount! ◈')], ephemeral: true });
         }
 
         if (amount <= 0) {

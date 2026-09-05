@@ -7,6 +7,7 @@ const db = require('./database');
 const embeds = require('./embeds');
 
 let _client = null;
+const MAX_TIMEOUT = 2147483647; // Max 32-bit integer ms (approx 24.8 days)
 
 // ─── Cooldowns ────────────────────────────────────────────────────────────────
 
@@ -31,17 +32,13 @@ async function processExpiredCooldown(cd) {
         const mention = initiator ? `${user} and ${initiator}` : `${user}`;
         const { file, embed } = embeds.cooldownExpiredEmbed(mention);
 
-        // DM the target user (Warm and Personal)
+        // DM the target user
         try {
-            const { file: dmFile, embed: dmEmbed } = embeds.cooldownExpiredEmbed('you');
-            dmEmbed.setTitle('✨ Rise and Shine!')
-                .setDescription('Hey there! Just wanted to let you know your cooldown is over. You\'re wide awake and ready for your next task! 🌸');
+            const { file: dmFile, embed: dmEmbed } = embeds.cooldownExpiredEmbed(user.username);
             await user.send({ embeds: [dmEmbed], files: [dmFile] });
         } catch { /* DMs may be closed */ }
 
-        // Ping in channel (Celebratory)
-        embed.setTitle('🎊 Cooldown Over!')
-            .setDescription(`Great news! ${user} is back in action and ready for assignments! 🥳✨`);
+        // Ping in channel
         await channel.send({ content: `${mention}`, embeds: [embed], files: [file] });
     } catch (err) {
         console.error(`[Cooldown] Error processing for ${cd.userId}:`, err.message);
@@ -62,12 +59,8 @@ async function processExpiredReminder(reminder) {
 
         if (!targetUser || !targetChannel) return;
 
-        const initiatorTag = initiator ? initiator.tag : 'someone';
+        const initiatorTag = initiator ? (initiator.username || initiator.tag) : 'Executive Suite';
         const { file, embed } = embeds.reminderFiredEmbed(reminder.message, initiatorTag);
-
-        // Urgent but friendly
-        embed.setTitle('👋 Hey! Just a quick reminder...')
-            .setDescription(`### 🔔 ${reminder.message}\n\nDon't forget to take care of this! ✨`);
 
         // DM
         try { await targetUser.send({ embeds: [embed], files: [file] }); } catch { /* DMs may be closed */ }
@@ -86,6 +79,8 @@ function scheduleCooldown(cd) {
     const remaining = cd.endTime - Date.now();
     if (remaining <= 0) {
         processExpiredCooldown(cd);
+    } else if (remaining > MAX_TIMEOUT) {
+        setTimeout(() => scheduleCooldown(cd), MAX_TIMEOUT);
     } else {
         setTimeout(() => processExpiredCooldown(cd), remaining);
     }
@@ -95,6 +90,8 @@ function scheduleReminder(reminder) {
     const remaining = reminder.endTime - Date.now();
     if (remaining <= 0) {
         processExpiredReminder(reminder);
+    } else if (remaining > MAX_TIMEOUT) {
+        setTimeout(() => scheduleReminder(reminder), MAX_TIMEOUT);
     } else {
         setTimeout(() => processExpiredReminder(reminder), remaining);
     }
@@ -105,8 +102,6 @@ function scheduleReminder(reminder) {
  */
 function init(client) {
     _client = client;
-
-    const now = Date.now();
 
     for (const cd of db.getCooldowns()) {
         scheduleCooldown(cd);

@@ -6,7 +6,7 @@ module.exports = {
     async execute(interaction) {
         const prompt = interaction.options.getString('prompt');
         if (!prompt) {
-            return interaction.reply({ content: 'You need to tell me what to imagine! 🌸', ephemeral: true });
+            return interaction.reply({ content: 'You need to specify what to imagine! ◈', ephemeral: true });
         }
 
         if (interaction.deferReply) {
@@ -42,7 +42,7 @@ module.exports = {
             }
         } catch (error) {
             console.error('[Imagine Error]', error);
-            const errorPayload = { content: 'Oops! I had trouble imagining that. 🧊💦' };
+            const errorPayload = { content: 'Unable to render the requested image at this time. Please try again later. ◈' };
             if (interaction.editReply) {
                 await interaction.editReply(errorPayload);
             } else {

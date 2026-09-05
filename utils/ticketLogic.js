@@ -11,6 +11,19 @@ const transcript = require('discord-html-transcripts');
 const db = require('./database');
 const { ticketWelcomeEmbed, COLORS, divider, footerQuip } = require('./embeds');
 
+function safeArray(val) {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+        try {
+            const parsed = JSON.parse(val);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+}
+
 async function createTicket(interaction, category, answers) {
     if (!interaction.deferred) await interaction.deferReply({ ephemeral: true });
 
@@ -20,7 +33,7 @@ async function createTicket(interaction, category, answers) {
 
     const count = db.incrementTicketCount(interaction.guildId);
     const paddedCount = count.toString().padStart(4, '0');
-    const staffRoles = JSON.parse(category.roles || '[]');
+    const staffRoles = safeArray(category?.roles);
 
     let channel;
     try {
@@ -133,7 +146,9 @@ async function closeTicket(interaction) {
         .setFooter({ text: footerQuip() })
         .setTimestamp();
 
-    await interaction.reply({ embeds: [closingEmbed] });
+    const isReply = interaction.replied || interaction.deferred;
+    const replyFn = isReply ? 'followUp' : 'reply';
+    await interaction[replyFn]({ embeds: [closingEmbed] }).catch(() => {});
 
     let file;
     try {
@@ -220,7 +235,7 @@ async function handleUserUpdate(interaction) {
     if (!ticket) return interaction.update({ embeds: [errorEmbed('Could not locate session record.')], components: [] });
 
     const category = db.getCategory(ticket.categoryId);
-    const staffRoles = JSON.parse(category?.roles || '[]');
+    const staffRoles = safeArray(category?.roles);
     const selectedUsers = interaction.values;
 
     await interaction.deferUpdate();

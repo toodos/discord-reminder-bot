@@ -18,7 +18,7 @@ module.exports = {
             const role     = interaction.options.getRole('support_role');
             const id       = Math.random().toString(36).slice(2, 9);
 
-            db.createCategory({ id, guildId: interaction.guildId, name, emoji, roles: [role.id], categoryId: category.id, maxTickets: 1, questions: [] });
+            db.createCategory({ id, guildId: interaction.guildId, name, emoji, roles: role ? [role.id] : [], categoryId: category.id, maxTickets: 1, questions: [] });
 
             await interaction.reply({
                 content: `✅ Created category **${name}** ${emoji}!\nRun \`/panel create\` to add it to a ticket panel. ✨`,

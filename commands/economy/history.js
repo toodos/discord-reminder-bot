@@ -11,7 +11,7 @@ module.exports = {
         const targetUser = interaction.options.getUser('user') || interaction.user;
 
         if (!targetUser) {
-            return interaction.reply({ embeds: [errorEmbed('Could not determine a valid user! 🌸')], ephemeral: true });
+            return interaction.reply({ embeds: [errorEmbed('Could not determine a valid user! ◈')], ephemeral: true });
         }
 
         const userData = db.getUser(targetUser.id);

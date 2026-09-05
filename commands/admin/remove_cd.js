@@ -14,7 +14,7 @@ module.exports = {
       !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
     ) {
       return interaction.reply({
-        embeds: [errorEmbed("Only Administrators can wake people up early!")],
+        embeds: [errorEmbed("Only Administrators can override executive cooldowns!")],
         ephemeral: true,
       });
     }
@@ -25,7 +25,7 @@ module.exports = {
       return interaction.reply({
         embeds: [
           errorEmbed(
-            "Please specify a valid user to remove the cooldown from! 🌸",
+            "Please specify a valid member to remove the cooldown from! ◈",
           ),
         ],
         ephemeral: true,

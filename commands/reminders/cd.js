@@ -14,14 +14,14 @@ module.exports = {
         const timeStr    = interaction.options.getString('time') || '24h';
 
         if (!targetUser) {
-            return interaction.reply({ embeds: [errorEmbed("Please specify a valid user to apply the cooldown to! 🌸")], ephemeral: true });
+            return interaction.reply({ embeds: [errorEmbed("Please specify a valid member to apply the cooldown to! ◈")], ephemeral: true });
         }
 
         const existing = db.getCooldown(targetUser.id);
         if (existing) {
             const unix = Math.floor(existing.endTime / 1000);
             return interaction.reply({
-                embeds: [errorEmbed(`${targetUser.tag} already has an active cooldown!\nIt expires <t:${unix}:R>. 🌙`)],
+                embeds: [errorEmbed(`**${targetUser.username}** already has an active cooldown!\nIt concludes <t:${unix}:R>. ◈`)],
                 ephemeral: true,
             });
         }
@@ -29,7 +29,7 @@ module.exports = {
         const duration = parseTime(timeStr);
         if (!duration) {
             return interaction.reply({
-                embeds: [errorEmbed("I couldn't understand that time format. Try `24h`, `1d`, or `12h`. 🌸")],
+                embeds: [errorEmbed("I couldn't understand that time format. Try `24h`, `1d`, or `12h`. ◈")],
                 ephemeral: true,
             });
         }

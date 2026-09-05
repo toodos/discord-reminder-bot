@@ -18,7 +18,7 @@ module.exports = {
         const durationMs = parseTime(timeStr);
         if (!durationMs) {
             return interaction.reply({
-                embeds: [errorEmbed("I couldn't understand that time format! Try something like `10m`, `2h`, or `1d`. 🌸")],
+                embeds: [errorEmbed("I couldn't understand that time format! Try something like `10m`, `2h`, or `1d`. ◈")],
                 ephemeral: true,
             });
         }

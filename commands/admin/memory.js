@@ -19,7 +19,7 @@ module.exports = {
             const slot    = interaction.options.getInteger('slot');
             const message = interaction.options.getString('message');
             db.setMemory(slot, message);
-            await interaction.reply({ content: `✅ Saved message to Slot ${slot}! ✨🌸`, ephemeral: true });
+            await interaction.reply({ content: `✅ Saved record to Slot ${slot}! ◈`, ephemeral: true });
 
         } else if (sub === 'get') {
             const slot    = interaction.options.getInteger('slot');
