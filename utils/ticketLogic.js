@@ -1,6 +1,7 @@
 /**
  * utils/ticketLogic.js
  * All ticket creation, closing, and management logic.
+ * Dark Luxury & Obsidian Gold Theme.
  */
 const {
     EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle,
@@ -14,7 +15,7 @@ async function createTicket(interaction, category, answers) {
     if (!interaction.deferred) await interaction.deferReply({ ephemeral: true });
 
     if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.ManageChannels)) {
-        return interaction.editReply({ content: "I don't have the `Manage Channels` permission! Please fix my role permissions. 🎀" });
+        return interaction.editReply({ content: "I lack the `Manage Channels` clearance! Please adjust my role permissions. 🗝️" });
     }
 
     const count = db.incrementTicketCount(interaction.guildId);
@@ -24,7 +25,7 @@ async function createTicket(interaction, category, answers) {
     let channel;
     try {
         channel = await interaction.guild.channels.create({
-            name: `ticket-${paddedCount}`,
+            name: `concierge-${paddedCount}`,
             type: ChannelType.GuildText,
             parent: category.categoryId,
             permissionOverwrites: [
@@ -41,8 +42,8 @@ async function createTicket(interaction, category, answers) {
         });
     } catch (err) {
         const msg = err.code === 50035
-            ? 'Invalid category channel. Please recreate the ticket category with a valid Discord channel category! 🌷'
-            : `Failed to create ticket channel: ${err.message}`;
+            ? 'Invalid department category. Please recreate the ticket category with a valid Discord category! 🏛️'
+            : `Failed to create concierge channel: ${err.message}`;
         return interaction.editReply({ content: msg });
     }
 
@@ -58,21 +59,21 @@ async function createTicket(interaction, category, answers) {
     const embed = ticketWelcomeEmbed(interaction.user, paddedCount, category, answers);
 
     const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('ticket_claim').setLabel('✦ Claim').setEmoji('👤').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId('ticket_manage_users').setLabel('Manage Users').setEmoji('⚙️').setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId('ticket_close_prompt').setLabel('Close Ticket').setEmoji('🔒').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId('ticket_claim').setLabel('◈ Claim Inquiry').setEmoji('👑').setStyle(ButtonStyle.Primary),
+        new ButtonBuilder().setCustomId('ticket_manage_users').setLabel('Manage Access').setEmoji('🗝️').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('ticket_close_prompt').setLabel('Close Terminal').setEmoji('🔒').setStyle(ButtonStyle.Danger),
     );
 
     const roleMention = staffRoles[0] ? `<@&${staffRoles[0]}>` : '';
     await channel.send({ content: `${interaction.user} ${roleMention}`.trim(), embeds: [embed], components: [row] });
-    await interaction.editReply({ content: `✨ Your ticket is ready! Head over to ${channel} 🎀` });
+    await interaction.editReply({ content: `✨ Private concierge terminal prepared! Please proceed to ${channel} 🥂` });
 }
 
 async function claimTicket(interaction) {
     const ticket = db.getTicket(interaction.channelId);
-    if (!ticket) return interaction.reply({ content: 'This is not a ticket channel.', ephemeral: true });
+    if (!ticket) return interaction.reply({ content: 'This is not an active concierge channel.', ephemeral: true });
     if (ticket.claimantId) {
-        return interaction.reply({ content: `This ticket is already claimed by <@${ticket.claimantId}>!`, ephemeral: true });
+        return interaction.reply({ content: `This inquiry is already claimed by <@${ticket.claimantId}>!`, ephemeral: true });
     }
 
     db.updateTicket(interaction.channelId, { claimantId: interaction.user.id });
@@ -88,7 +89,7 @@ async function claimTicket(interaction) {
 
     await interaction.update({ components: [newRow] });
     await interaction.followUp({
-        content: `✅ Ticket claimed by ${interaction.user}!`,
+        content: `👑 Inquiry claimed by ${interaction.user}!`,
         allowedMentions: { parse: [] },
     });
 }
@@ -96,18 +97,18 @@ async function claimTicket(interaction) {
 async function closePrompt(interaction) {
     const embed = new EmbedBuilder()
         .setColor(COLORS.warning)
-        .setTitle('🔒  Close this Ticket?')
+        .setTitle('🔒  Conclude this Session?')
         .setDescription(
-            `Are you sure you want to close this ticket?\n\n` +
-            `A full transcript will be generated and saved, then the channel will be deleted.\n\n` +
+            `Are you certain you wish to conclude this concierge session?\n\n` +
+            `A comprehensive executive transcript will be generated and archived, followed by channel deletion.\n\n` +
             `*${divider()}*`
         )
-        .setFooter({ text: '⏳ This action cannot be undone!' })
+        .setFooter({ text: '⏳ This action cannot be revoked.' })
         .setTimestamp();
 
     const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId('ticket_close_confirm').setLabel('Yes, Close It').setEmoji('🔒').setStyle(ButtonStyle.Danger),
-        new ButtonBuilder().setCustomId('ticket_close_cancel').setLabel('Keep Open').setEmoji('🌸').setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId('ticket_close_confirm').setLabel('Yes, Conclude & Archive').setEmoji('🔒').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId('ticket_close_cancel').setLabel('Remain Open').setEmoji('⚜️').setStyle(ButtonStyle.Secondary),
     );
 
     await interaction.reply({
@@ -120,15 +121,15 @@ async function closePrompt(interaction) {
 async function closeTicket(interaction) {
     const ticket = db.getTicket(interaction.channelId);
     if (!ticket) {
-        return interaction.reply({ embeds: [errorEmbed('This channel is not a ticket.')], ephemeral: true });
+        return interaction.reply({ embeds: [errorEmbed('This channel is not an active concierge session.')], ephemeral: true });
     }
 
     const config = db.getGuildConfig(interaction.guildId);
 
     const closingEmbed = new EmbedBuilder()
-        .setColor(COLORS.lilac ?? COLORS.info)
-        .setTitle('📄  Wrapping Up...')
-        .setDescription('🔒 Closing ticket and generating a beautiful transcript for your records~\n\n*Please wait a moment!* 🌸')
+        .setColor(COLORS.gold)
+        .setTitle('📜  Archiving Executive Inquiry...')
+        .setDescription('🔒 Concluding session and compiling an archival transcript for your records.\n\n*Kindly hold for archival completion...* ⚜️')
         .setFooter({ text: footerQuip() })
         .setTimestamp();
 
@@ -146,7 +147,7 @@ async function closeTicket(interaction) {
 
     db.updateTicket(interaction.channelId, { status: 'closed', closedAt: Date.now() });
 
-    const sendPayload = { content: `🎀 Transcript for **${interaction.channel.name}** — closed by ${interaction.user}. ✨` };
+    const sendPayload = { content: `📜 Archival transcript for **${interaction.channel.name}** — concluded by ${interaction.user}. ⚜️` };
     if (file) sendPayload.files = [file];
 
     // Log to log channel
@@ -165,7 +166,7 @@ async function closeTicket(interaction) {
     try {
         const opener = await interaction.client.users.fetch(ticket.userId);
         await opener.send({
-            content: `✨ Your ticket **${interaction.channel.name}** has been closed! Here's your transcript for reference. Thanks for reaching out~ 🌸🎀`,
+            content: `⚜️ Your concierge terminal **${interaction.channel.name}** has concluded. Enclosed is your official transcript for future reference. 🥂`,
             ...(file ? { files: [file] } : {}),
         });
     } catch { /* DMs may be closed */ }
@@ -179,24 +180,24 @@ async function manageUsers(interaction) {
         (config.adminRoleId && interaction.member.roles.cache.has(config.adminRoleId));
 
     if (!isAdmin) {
-        return interaction.reply({ content: 'Only administrators can manage users in tickets! 🎀', ephemeral: true });
+        return interaction.reply({ content: 'Only administrators can manage member clearances in concierge sessions! 🗝️', ephemeral: true });
     }
 
     const select = new UserSelectMenuBuilder()
         .setCustomId('ticket_user_select')
-        .setPlaceholder('Select users to add or remove...')
+        .setPlaceholder('Select members to grant or revoke clearance...')
         .setMinValues(0)
         .setMaxValues(10);
 
     const manageEmbed = new EmbedBuilder()
-        .setColor(COLORS.sky ?? COLORS.info)
-        .setTitle('👥  Manage Ticket Access')
+        .setColor(COLORS.gold)
+        .setTitle('👥  Manage Terminal Clearances')
         .setDescription(
-            `Select the users you want to **add** to this ticket below.\n` +
-            `Deselecting a user will **remove** their access.\n\n` +
+            `Select members to **grant** access to this private session below.\n` +
+            `Deselecting a member will **revoke** their clearance immediately.\n\n` +
             `*${divider()}*`
         )
-        .setFooter({ text: '🌸 Changes apply instantly!' })
+        .setFooter({ text: '🗝️ Clearances take effect immediately.' })
         .setTimestamp();
 
     await interaction.reply({
@@ -212,11 +213,11 @@ async function handleUserUpdate(interaction) {
         (config.adminRoleId && interaction.member.roles.cache.has(config.adminRoleId));
 
     if (!isAdmin) {
-        return interaction.reply({ content: 'Only administrators can manage users in tickets! 🎀', ephemeral: true });
+        return interaction.reply({ content: 'Only administrators can manage clearances in concierge sessions! 🗝️', ephemeral: true });
     }
 
     const ticket = db.getTicket(interaction.channelId);
-    if (!ticket) return interaction.update({ embeds: [errorEmbed('Could not find ticket data.')], components: [] });
+    if (!ticket) return interaction.update({ embeds: [errorEmbed('Could not locate session record.')], components: [] });
 
     const category = db.getCategory(ticket.categoryId);
     const staffRoles = JSON.parse(category?.roles || '[]');
@@ -244,8 +245,8 @@ async function handleUserUpdate(interaction) {
 
     const successEmbed = new EmbedBuilder()
         .setColor(COLORS.success)
-        .setTitle('✅  Access Updated!')
-        .setDescription(`🌸 Successfully updated ticket access for **${selectedUsers.length}** user(s)!\n\n*${divider()}*`)
+        .setTitle('✅  Clearances Updated')
+        .setDescription(`◈ Successfully updated terminal clearance for **${selectedUsers.length}** member(s)!\n\n*${divider()}*`)
         .setFooter({ text: footerQuip() })
         .setTimestamp();
 

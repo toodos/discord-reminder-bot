@@ -26,7 +26,7 @@ module.exports = {
 
             // Validate UPI format loosely
             if (!upiId.includes('@')) {
-                return interaction.reply({ embeds: [errorEmbed('That doesn\'t look like a valid UPI ID! It should contain `@` (e.g. `name@upi`). 🌸')], ephemeral: true });
+                return interaction.reply({ embeds: [errorEmbed('That doesn\'t look like a valid UPI ID! It should contain `@` (e.g. `name@upi`). ◈')], ephemeral: true });
             }
 
             let qrDataUri = null;
@@ -40,17 +40,17 @@ module.exports = {
                     qrDataUri = `data:image/${ext};base64,${base64Str}`;
                 } catch (err) {
                     console.error('[UPI Error] Failed to fetch/parse QR code:', err);
-                    return interaction.reply({ embeds: [errorEmbed('Failed to save the QR code image! 🧊')], ephemeral: true });
+                    return interaction.reply({ embeds: [errorEmbed('Failed to process the QR code attachment! ◈')], ephemeral: true });
                 }
             }
 
             db.setUpi(targetUser.id, interaction.guildId, upiId, qrDataUri);
 
             const embed = new EmbedBuilder()
-                .setColor(COLORS.mint)
-                .setTitle('✦  UPI Info Saved! 💳')
+                .setColor(COLORS.gold)
+                .setTitle('🏛️  Payment Dossier Registered • UPI Vault')
                 .setDescription(
-                    `**${targetUser.username}'s** payment details have been saved to the vault!\n\n` +
+                    `**${targetUser.username}'s** private payment credentials have been securely registered in the sovereign vault.\n\n` +
                     `*${divider()}*`
                 )
                 .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
@@ -84,16 +84,16 @@ module.exports = {
 
             if (!record) {
                 return interaction.reply({
-                    embeds: [errorEmbed(`No UPI info saved for **${targetUser.username}** yet!\nAn admin can add it with \`/upi set\`. 🌸`)],
+                    embeds: [errorEmbed(`No payment credentials stored for **${targetUser.username}** yet!\nAn administrator can register them with \`/upi set\`. ◈`)],
                     ephemeral: true,
                 });
             }
 
             const embed = new EmbedBuilder()
                 .setColor(COLORS.gold)
-                .setTitle(`💳  ${targetUser.username}'s UPI Details`)
+                .setTitle(`💳  ${targetUser.username}'s Private UPI Dossier`)
                 .setDescription(
-                    `Here are the saved payment details!\n\n` +
+                    `Encrypted payment credentials retrieved from the private vault.\n\n` +
                     `*${divider()}*`
                 )
                 .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
@@ -102,7 +102,7 @@ module.exports = {
                     { name: '💳  UPI ID',     value: `\`${record.upiId}\``,                                           inline: true },
                     { name: '🗓️  Saved',      value: `<t:${Math.floor(record.savedAt / 1000)}:R>`,                    inline: true }
                 )
-                .setFooter({ text: `💖 Tap UPI ID to copy  •  ${footerQuip()}` })
+                .setFooter({ text: `◈ Tap UPI ID to copy  •  ${footerQuip()}` })
                 .setTimestamp();
 
             const files = [];
@@ -147,15 +147,15 @@ module.exports = {
             const existing   = db.getUpi(targetUser.id, interaction.guildId);
 
             if (!existing) {
-                return interaction.reply({ embeds: [errorEmbed(`No UPI info found for **${targetUser.username}**. 🌸`)], ephemeral: true });
+                return interaction.reply({ embeds: [errorEmbed(`No UPI dossier found for **${targetUser.username}**. ◈`)], ephemeral: true });
             }
 
             db.deleteUpi(targetUser.id, interaction.guildId);
 
             const embed = new EmbedBuilder()
                 .setColor(COLORS.danger)
-                .setTitle('🗑️  UPI Info Deleted')
-                .setDescription(`Payment details for **${targetUser.username}** have been removed.\n\n*${divider()}*`)
+                .setTitle('🗑️  Payment Dossier Expunged')
+                .setDescription(`Payment credentials for **${targetUser.username}** have been permanently removed from the vault.\n\n*${divider()}*`)
                 .setFooter({ text: footerQuip() })
                 .setTimestamp();
 
@@ -171,7 +171,7 @@ module.exports = {
             const records = db.getAllUpi(interaction.guildId);
 
             if (!records.length) {
-                return interaction.reply({ embeds: [errorEmbed('No UPI info saved on this server yet! 🌱')], ephemeral: true });
+                return interaction.reply({ embeds: [errorEmbed('No UPI dossiers registered on this server yet! ◈')], ephemeral: true });
             }
 
             const lines = records.map(r =>
@@ -179,10 +179,10 @@ module.exports = {
             ).join('\n');
 
             const embed = new EmbedBuilder()
-                .setColor(COLORS.lilac ?? COLORS.info)
-                .setTitle('💳  All Saved UPI Records')
+                .setColor(COLORS.gold)
+                .setTitle('🏛️  Sovereign Registry • Saved UPI Dossiers')
                 .setDescription(`${lines}\n\n*${divider()}*`)
-                .setFooter({ text: `${records.length} record(s)  •  ${footerQuip()}` })
+                .setFooter({ text: `${records.length} dossier(s)  •  ${footerQuip()}` })
                 .setTimestamp();
 
             return interaction.reply({ embeds: [embed], ephemeral: true });

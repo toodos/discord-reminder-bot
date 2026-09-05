@@ -35,14 +35,14 @@ module.exports = {
       }
 
       const embed = new EmbedBuilder()
-        .setColor(COLORS.pink)
+        .setColor(COLORS.gold)
         .setTitle(title)
         .setDescription(
           `${description}\n\n` +
-            `✦ ── ✦ ── ✦ ── ✦ ── ✦\n` +
-            `*Click a button below to open a ticket!*`,
+            `◈ ━━━━━━━━ ◈ ━━━━━━━━ ◈\n` +
+            `*Select a department below to initiate private concierge communication.*`,
         )
-        .setFooter({ text: "🌸 We're happy to help  •  Oakawol Support" })
+        .setFooter({ text: "👑 Premier Concierge Suite  •  Oakawol Private Service" })
         .setTimestamp();
 
       // Max 5 buttons per ActionRow
