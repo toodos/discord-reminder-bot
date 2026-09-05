@@ -88,13 +88,16 @@ db.exec(`
         timestamp   INTEGER NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS upi_info (
+    CREATE TABLE IF NOT EXISTS transactions (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
         userId      TEXT NOT NULL,
-        guildId     TEXT NOT NULL,
-        upiId       TEXT NOT NULL,
-        qrUrl       TEXT,
-        savedAt     INTEGER NOT NULL,
-        PRIMARY KEY (userId, guildId)
+        type        TEXT NOT NULL,
+        amount      REAL NOT NULL,
+        oldBalance  REAL NOT NULL,
+        newBalance  REAL NOT NULL,
+        reason      TEXT,
+        executorId  TEXT,
+        timestamp   INTEGER NOT NULL
     );
 `);
 
@@ -106,6 +109,15 @@ const stmts = {
     addMoney:       db.prepare('UPDATE users SET balance = balance + ? WHERE userId = ?'),
     removeMoney:    db.prepare('UPDATE users SET balance = balance - ? WHERE userId = ?'),
     getAllUsers:     db.prepare('SELECT * FROM users ORDER BY balance DESC'),
+
+    // Transactions
+    addTransaction: db.prepare(`
+        INSERT INTO transactions (userId, type, amount, oldBalance, newBalance, reason, executorId, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `),
+    getTransactions: db.prepare(`
+        SELECT * FROM transactions WHERE userId = ? ORDER BY timestamp DESC LIMIT ?
+    `),
 
     // Cooldowns
     getCooldown:    db.prepare('SELECT * FROM cooldowns WHERE userId = ?'),
@@ -152,16 +164,26 @@ function getUser(userId) {
     return stmts.getUser.get(userId);
 }
 
-function addMoney(userId, amount) {
+function addMoney(userId, amount, reason = null, executorId = null) {
     ensureUser(userId);
+    const oldBalance = stmts.getUser.get(userId).balance;
+    const newBalance = oldBalance + amount;
     stmts.addMoney.run(amount, userId);
-    return stmts.getUser.get(userId).balance;
+    stmts.addTransaction.run(userId, 'ADD', amount, oldBalance, newBalance, reason, executorId, Date.now());
+    return newBalance;
 }
 
-function removeMoney(userId, amount) {
+function removeMoney(userId, amount, reason = null, executorId = null) {
     ensureUser(userId);
+    const oldBalance = stmts.getUser.get(userId).balance;
+    const newBalance = oldBalance - amount;
     stmts.removeMoney.run(amount, userId);
-    return stmts.getUser.get(userId).balance;
+    stmts.addTransaction.run(userId, 'REMOVE', amount, oldBalance, newBalance, reason, executorId, Date.now());
+    return newBalance;
+}
+
+function getTransactions(userId, limit = 5) {
+    return stmts.getTransactions.all(userId, limit);
 }
 
 function getAllUsers() {
@@ -344,7 +366,7 @@ function getAllUpi(guildId) {
 
 module.exports = {
     // Economy
-    getUser, addMoney, removeMoney, getAllUsers,
+    getUser, addMoney, removeMoney, getAllUsers, getTransactions,
     // Cooldowns
     getCooldown, getCooldowns, setCooldown, clearCooldown, removeCooldownByUserId,
     // Reminders

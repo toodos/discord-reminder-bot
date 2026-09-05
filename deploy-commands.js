@@ -51,6 +51,7 @@ const commands = [
         options: [
             { name: 'user',   description: 'The lucky user 🍭',  type: 6,  required: true },
             { name: 'amount', description: 'How much? 💎',        type: 10, required: true },
+            { name: 'reason', description: 'Reason for deposit 📝', type: 3, required: false },
         ],
     },
     {
@@ -60,6 +61,14 @@ const commands = [
         options: [
             { name: 'user',   description: 'The user to deduct from 🐾', type: 6,  required: true },
             { name: 'amount', description: 'Amount to remove 🍭',         type: 10, required: true },
+            { name: 'reason', description: 'Reason for deduction 📝',  type: 3, required: false },
+        ],
+    },
+    {
+        name: 'history',
+        description: 'View recent transaction history for yourself or another user 📜✨',
+        options: [
+            { name: 'user', description: 'Whose history? (default: yours) 🎀', type: 6, required: false },
         ],
     },
 

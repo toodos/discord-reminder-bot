@@ -393,7 +393,7 @@ module.exports = async function onMessageCreate(message) {
     const dynamicTools = [...aiToolDefinitions];
     
     // Explicitly add command tools so Groq tool validation passes
-    const cmdTools = ["add_money", "remove_money", "balance", "imagine", "remind"];
+    const cmdTools = ["add_money", "remove_money", "balance", "history", "imagine", "remind"];
     for (const cmdName of cmdTools) {
       dynamicTools.push({
         type: "function",
@@ -429,6 +429,7 @@ IMPORTANT: You HAVE real-time web search capabilities via tools (search_google, 
 Available bot commands (use via cmd_ tools):
 - cmd_add_money / cmd_remove_money: Manage a user's server balance. Pass args as "<number> <userId>"
 - cmd_balance: View a user's balance. Pass args as "<userId>"
+- cmd_history: View a user's transaction history. Pass args as "<userId>"
 - cmd_imagine: Create AI art. Pass args as the image description.
 - cmd_remind: Schedule a reminder. Pass args as "<duration> <note>" (e.g. "10m check oven")
 

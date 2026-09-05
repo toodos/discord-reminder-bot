@@ -192,6 +192,26 @@ function cooldownRemovedEmbed(targetUser) {
 
 // ── Economy Embeds ───────────────────────────────────────────────────────────
 
+function formatTransactionHistory(transactions) {
+  if (!transactions || transactions.length === 0) {
+    return "*No recent transactions recorded.*";
+  }
+
+  return transactions
+    .map((tx) => {
+      const isAdd = tx.type === "ADD";
+      const icon = isAdd ? "🟢" : "🔴";
+      const sign = isAdd ? "+" : "-";
+      const unixTime = Math.floor(tx.timestamp / 1000);
+      const timeStr = `<t:${unixTime}:R>`;
+      const reasonStr = tx.reason ? ` • *${tx.reason}*` : "";
+      const executorStr = tx.executorId ? ` (by <@${tx.executorId}>)` : "";
+
+      return `${icon} **${sign}₹${tx.amount.toLocaleString()}** (${timeStr})${reasonStr}${executorStr}\n└ *Balance: ₹${tx.newBalance.toLocaleString()}*`;
+    })
+    .join("\n");
+}
+
 function balanceEmbed(
   client,
   targetUser,
@@ -199,8 +219,11 @@ function balanceEmbed(
   rank,
   leaderboardStr,
   totalEconomy,
+  transactions = []
 ) {
   const tier = getTier(balance);
+  const historyFormatted = formatTransactionHistory(transactions);
+
   return {
     file: asset("balance.png"),
     embed: new EmbedBuilder()
@@ -232,6 +255,11 @@ function balanceEmbed(
           value: `\`${tier.icon} ${tier.name}\``,
           inline: true,
         },
+        {
+          name: "📜  Recent Transaction History",
+          value: historyFormatted,
+          inline: false,
+        }
       )
       .setFooter({
         text: `💰 ₹${totalEconomy.toLocaleString()} managed by this unit  •  ${footerQuip()}`,
@@ -240,13 +268,15 @@ function balanceEmbed(
   };
 }
 
-function addMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
+function addMoneyEmbed(targetUser, amount, oldBalance, newBalance, transactions = []) {
   const tier = getTier(newBalance);
   const oldTier = getTier(oldBalance);
   const promoted = oldTier.name !== tier.name;
   const tierLine = promoted
     ? `${oldTier.icon} ${oldTier.name}  →  ${tier.icon} **${tier.name}** 🎉`
     : `${tier.icon} ${tier.name}`;
+
+  const historyFormatted = formatTransactionHistory(transactions);
 
   return {
     file: asset("money.png"),
@@ -268,6 +298,11 @@ function addMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
           inline: true,
         },
         { name: "🏅  Unit Status", value: tierLine, inline: true },
+        {
+          name: "📜  Recent Transaction History",
+          value: historyFormatted,
+          inline: false,
+        }
       ),
   };
 }
@@ -302,13 +337,15 @@ function memoryListEmbed(slots) {
     .setTimestamp();
 }
 
-function removeMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
+function removeMoneyEmbed(targetUser, amount, oldBalance, newBalance, transactions = []) {
   const tier = getTier(newBalance);
   const oldTier = getTier(oldBalance);
   const demoted = oldTier.name !== tier.name;
   const tierLine = demoted
     ? `${oldTier.icon} ${oldTier.name}  →  ${tier.icon} ${tier.name}`
     : `${tier.icon} ${tier.name}`;
+
+  const historyFormatted = formatTransactionHistory(transactions);
 
   return {
     file: asset("money.png"),
@@ -327,7 +364,39 @@ function removeMoneyEmbed(targetUser, amount, oldBalance, newBalance) {
           inline: true,
         },
         { name: "🏅  Unit Status", value: tierLine, inline: true },
+        {
+          name: "📜  Recent Transaction History",
+          value: historyFormatted,
+          inline: false,
+        }
       ),
+  };
+}
+
+function historyEmbed(targetUser, balance, transactions = []) {
+  const tier = getTier(balance);
+  const historyFormatted = formatTransactionHistory(transactions);
+
+  const embed = base(COLORS.sky)
+    .setAuthor({
+      name: `📜 Transaction History for ${targetUser.username}`,
+      iconURL: targetUser.displayAvatarURL({ dynamic: true }),
+    })
+    .setThumbnail("attachment://money.png")
+    .setDescription(
+      `*💳 Accessing financial audit logs...*\n\n` +
+        `Current Balance: **₹${balance.toLocaleString()}** (${tier.icon} ${tier.name})\n\n` +
+        `*${divider()}*`,
+    )
+    .addFields({
+      name: "📋  Recent Activity Logs",
+      value: historyFormatted,
+      inline: false,
+    });
+
+  return {
+    file: asset("money.png"),
+    embed,
   };
 }
 
@@ -407,6 +476,7 @@ module.exports = {
   balanceEmbed,
   addMoneyEmbed,
   removeMoneyEmbed,
+  historyEmbed,
   memoryListEmbed,
   ticketWelcomeEmbed,
   categoryListEmbed,

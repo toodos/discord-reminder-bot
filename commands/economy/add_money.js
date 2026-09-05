@@ -15,6 +15,7 @@ module.exports = {
 
         const targetUser = interaction.options.getUser('user');
         const amount     = interaction.options.getNumber('amount');
+        const reason     = interaction.options.getString('reason') || 'Added by Administrator';
 
         if (!targetUser || !amount) {
             return interaction.reply({ embeds: [errorEmbed('Please specify both a valid user and an amount! 🌸')], ephemeral: true });
@@ -25,8 +26,9 @@ module.exports = {
         }
 
         const oldBalance = db.getUser(targetUser.id).balance;
-        const newBalance = db.addMoney(targetUser.id, amount);
-        const { file, embed } = addMoneyEmbed(targetUser, amount, oldBalance, newBalance);
+        const newBalance = db.addMoney(targetUser.id, amount, reason, interaction.user.id);
+        const transactions = db.getTransactions(targetUser.id, 5);
+        const { file, embed } = addMoneyEmbed(targetUser, amount, oldBalance, newBalance, transactions);
         await interaction.reply({ embeds: [embed], files: [file] });
     },
 };

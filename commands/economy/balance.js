@@ -26,8 +26,9 @@ module.exports = {
             + (rank > 3 ? `\n\n...You are at **#${rank}**` : '');
 
         const totalEconomy = allUsers.reduce((sum, u) => sum + u.balance, 0);
+        const transactions = db.getTransactions(targetUser.id, 5);
 
-        const { file, embed } = balanceEmbed(interaction.client, targetUser, userData.balance, rank, leaderboardStr, totalEconomy);
+        const { file, embed } = balanceEmbed(interaction.client, targetUser, userData.balance, rank, leaderboardStr, totalEconomy, transactions);
         await interaction.reply({ embeds: [embed], files: [file] });
     },
 };
